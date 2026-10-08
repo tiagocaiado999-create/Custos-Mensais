@@ -1,0 +1,763 @@
+<title>Custos Mensais</title>
+<style>
+/* Layout: seletor de pessoa (Tiago/Cláudia/Casal) + extrato do mês + histórico anual + gráfico + investimentos */
+:root{
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --line:#ece7dd;
+  --fg:#2b2620; --muted:#8a8070;
+  --accent:#b5572e; --accent-fg:#ffffff;
+  --fixo:#5b7a63; --opcional:#b5572e;
+  --tiago:#4f7ea8; --claudia:#a8578f;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1a17; --surface:#242120; --border:#3a342c; --line:#2d2823;
+    --fg:#ece6dc; --muted:#978d7c;
+    --accent:#e08358; --accent-fg:#1c1a17;
+    --fixo:#8bb092; --opcional:#e08358;
+    --tiago:#7fb0da; --claudia:#d98bbd;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1a17; --surface:#242120; --border:#3a342c; --line:#2d2823;
+  --fg:#ece6dc; --muted:#978d7c;
+  --accent:#e08358; --accent-fg:#1c1a17;
+  --fixo:#8bb092; --opcional:#e08358;
+  --tiago:#7fb0da; --claudia:#d98bbd;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;padding-inline:16px;padding-block:24px;max-width:640px;margin:0 auto}
+h1{font-family:'Fraunces',Georgia,serif;font-size:1.5rem;font-weight:600;margin:0 0 16px;text-wrap:balance}
+
+.nav{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-bottom:14px}
+.nav button{border:none;background:transparent;color:var(--fg);font-size:1.1rem;cursor:pointer;padding:6px 12px;border-radius:8px;line-height:1}
+.nav button:hover{background:var(--bg)}
+.nav .mes-atual{font-family:'Fraunces',Georgia,serif;font-size:1.05rem;text-align:center;flex:1}
+
+.pessoa-tabs{display:flex;gap:6px;margin-bottom:14px}
+.pessoa-tabs button{flex:1;padding:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.85rem;font-weight:600;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.pessoa-tabs button i{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pessoa-tabs button[data-p="tiago"] i{background:var(--tiago)}
+.pessoa-tabs button[data-p="claudia"] i{background:var(--claudia)}
+.pessoa-tabs button[data-p="casal"] i{background:var(--accent)}
+.pessoa-tabs button.ativo{background:var(--bg);border-color:var(--fg);color:var(--fg)}
+
+.resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.tile .label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tile .val{font-family:'Fraunces',Georgia,serif;font-size:1.2rem;font-variant-numeric:tabular-nums;margin-top:4px}
+.tile.total .val{color:var(--accent)}
+.tile.saldo .val.positivo{color:var(--fixo)}
+.tile.saldo .val.negativo{color:var(--opcional)}
+
+.salario-box{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;margin-bottom:16px}
+.salario-box label{font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--fg)}
+.salario-box .valor-wrap{display:flex;align-items:center;gap:4px}
+.salario-box .valor-wrap span{color:var(--muted);font-size:.95rem}
+.salario-box input[type=number]{width:110px;border:none;background:transparent;color:var(--fg);font-size:1.05rem;font-family:'Fraunces',Georgia,serif;text-align:right;font-variant-numeric:tabular-nums;padding:4px}
+.salario-box input[type=number]:focus{outline:none;background:var(--bg);border-radius:6px}
+.salario-box .val-combinado{font-size:1.05rem;font-family:'Fraunces',Georgia,serif;font-variant-numeric:tabular-nums}
+
+.tabs{display:flex;gap:6px;margin-bottom:20px}
+.tabs button{flex:1;padding:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.85rem;font-weight:500;border-radius:8px;cursor:pointer}
+.tabs button.ativo{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+
+.extrato{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.extrato-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.extrato-head .tipo{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.fixo{background:var(--fixo)}
+.dot.opcional{background:var(--opcional)}
+.extrato-head .subtotal{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem}
+
+.linha{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.linha:last-of-type{border-bottom:none}
+.linha .tag{font-size:.65rem;font-weight:700;color:var(--accent-fg);background:var(--muted);border-radius:4px;padding:2px 5px;flex-shrink:0}
+.linha .tag.tiago{background:var(--tiago)}
+.linha .tag.claudia{background:var(--claudia)}
+.linha .nome-fixo{flex:1;min-width:0;font-size:.93rem;padding:4px}
+.linha input[type=text]{flex:1;min-width:0;border:none;background:transparent;color:var(--fg);font-size:.93rem;padding:4px}
+.linha input[type=text]:focus{outline:none;background:var(--bg);border-radius:6px}
+.linha .valor-wrap{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.linha .valor-wrap span{color:var(--muted);font-size:.85rem}
+.linha input[type=number]{width:72px;border:none;background:transparent;color:var(--fg);font-size:.93rem;text-align:right;font-variant-numeric:tabular-nums;padding:4px}
+.linha input[type=number]:focus{outline:none;background:var(--bg);border-radius:6px}
+.linha .valor-fixo{font-size:.93rem;font-variant-numeric:tabular-nums;width:72px;text-align:right}
+.linha button{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1;padding:4px 6px;border-radius:6px}
+.linha button:hover{color:var(--accent);background:var(--bg)}
+
+.add-row{display:flex;gap:8px;padding:12px 16px;background:var(--bg)}
+.add-row input[type=text]{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--fg);font-size:.88rem}
+.add-row input[type=number]{width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--fg);font-size:.88rem;text-align:right}
+.add-row input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.add-row button{padding:8px 13px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-size:.85rem;cursor:pointer;flex-shrink:0}
+.add-row button:active{transform:scale(.97)}
+
+.vazio{padding:18px 16px;color:var(--muted);font-size:.88rem;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.vazio button{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:.82rem;padding:6px 10px;border-radius:7px;cursor:pointer;flex-shrink:0}
+.vazio button:hover{border-color:var(--accent);color:var(--accent)}
+
+h2.hist-titulo{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:28px 0 8px}
+.historico{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+thead th{text-align:right;color:var(--muted);font-weight:500;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:10px 14px;border-bottom:1px solid var(--border)}
+thead th:first-child{text-align:left}
+tbody td{padding:9px 14px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+tbody td:first-child{text-align:left;font-variant-numeric:normal;text-transform:capitalize}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--bg)}
+tbody tr.ativo{background:var(--bg)}
+tbody tr.ativo td:first-child{color:var(--accent);font-weight:600}
+tbody td.total-col{font-weight:600}
+tbody tr.sem-dados td{color:var(--muted);font-style:italic}
+tfoot td{padding:10px 14px;border-top:2px solid var(--border);font-weight:600;text-align:right}
+tfoot td:first-child{text-align:left}
+
+.grafico-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px 10px}
+.grafico-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.grafico-head h2{font-family:'Fraunces',Georgia,serif;font-size:1.05rem;font-weight:600;margin:0}
+.grafico-head .destaque{font-size:.8rem;color:var(--muted)}
+.grafico-head .destaque b{color:var(--accent)}
+.legenda{display:flex;gap:16px;margin-bottom:10px;font-size:.78rem;color:var(--muted)}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.legenda i.fixo{background:var(--fixo)}
+.legenda i.opcional{background:var(--opcional)}
+
+.invest-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.invest-linha{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.invest-linha:last-of-type{border-bottom:none}
+.invest-linha .nome{flex:1;min-width:120px;font-size:.93rem}
+.invest-linha .meta{color:var(--muted);font-size:.78rem}
+.invest-linha .valor{font-variant-numeric:tabular-nums;font-size:.93rem;flex-shrink:0}
+.invest-linha button{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:.78rem;padding:6px 10px;border-radius:7px;cursor:pointer;flex-shrink:0}
+.invest-linha button:hover{border-color:var(--accent);color:var(--accent)}
+.invest-linha button.remover{border:none;background:transparent;color:var(--muted);font-size:1.1rem;padding:4px 6px}
+.invest-linha button.remover:hover{color:var(--opcional);background:var(--bg)}
+.retirar-form{display:flex;align-items:center;gap:8px;width:100%;padding-top:8px}
+.retirar-form input{width:100px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--fg);font-size:.85rem;text-align:right}
+.retirar-form input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.retirar-form button{padding:7px 11px;border:none;border-radius:7px;background:var(--accent);color:var(--accent-fg);font-size:.82rem;cursor:pointer}
+.lucro-pos{color:var(--fixo);font-weight:600}
+.lucro-neg{color:var(--opcional);font-weight:600}
+
+footer{margin-top:24px;text-align:center;color:var(--muted);font-size:.78rem}
+
+@media (max-width: 480px){
+  table{font-size:.78rem}
+  thead th, tbody td, tfoot td{padding:7px 6px}
+  .resumo{grid-template-columns:repeat(2,1fr)}
+  .pessoa-tabs button, .tabs button{font-size:.78rem;padding:9px 4px}
+  h1{font-size:1.3rem}
+  .nav .mes-atual{font-size:.95rem}
+  .extrato-head{padding:11px 12px}
+  .linha, .add-row, .invest-linha{padding-left:12px;padding-right:12px}
+}
+/* previne zoom automático do iOS ao focar campos (exige font-size >=16px) */
+input[type=number], input[type=text], select{font-size:16px}
+.salario-box input[type=number]{font-size:1.05rem}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600&display=swap">
+
+<h1>Custos Mensais</h1>
+
+<div class="nav">
+  <button id="btnPrev" aria-label="Mês anterior">‹</button>
+  <div class="mes-atual" id="mesAtualLabel"></div>
+  <button id="btnNext" aria-label="Mês seguinte">›</button>
+</div>
+
+<div class="pessoa-tabs">
+  <button data-p="tiago" class="ativo"><i></i>Tiago</button>
+  <button data-p="claudia"><i></i>Cláudia</button>
+  <button data-p="casal"><i></i>Casal</button>
+</div>
+
+<div class="resumo">
+  <div class="tile"><div class="label">Salário</div><div class="val" id="totalSalario">€0</div></div>
+  <div class="tile"><div class="label">Fixos</div><div class="val" id="totalFixo">€0</div></div>
+  <div class="tile"><div class="label">Opcionais</div><div class="val" id="totalOpcional">€0</div></div>
+  <div class="tile saldo"><div class="label">Saldo</div><div class="val" id="totalSaldo">€0</div></div>
+</div>
+
+<div class="tabs">
+  <button id="tabExtrato" class="ativo">Extrato</button>
+  <button id="tabGrafico">Gráfico</button>
+  <button id="tabInvestimentos">Investimentos</button>
+</div>
+
+<div id="viewExtrato">
+  <div class="salario-box" id="salarioBox"></div>
+
+  <div id="secaoFixo"></div>
+  <div id="secaoOpcional"></div>
+
+  <h2 class="hist-titulo" id="histTitulo">Histórico — 2026</h2>
+  <div class="historico">
+    <table>
+      <thead>
+        <tr><th>Mês</th><th>Fixos</th><th>Opcionais</th><th>Total</th></tr>
+      </thead>
+      <tbody id="histBody"></tbody>
+      <tfoot>
+        <tr><td>Ano</td><td id="histTotalFixo">€0</td><td id="histTotalOpcional">€0</td><td id="histTotalGeral">€0</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div id="viewGrafico" hidden>
+  <div class="grafico-box">
+    <div class="grafico-head">
+      <h2 id="graficoAno">Gastos — 2026</h2>
+      <div class="destaque" id="graficoDestaque"></div>
+    </div>
+    <div class="legenda">
+      <span><i class="fixo"></i>Fixos</span>
+      <span><i class="opcional"></i>Opcionais</span>
+    </div>
+    <div id="graficoSvgWrap"></div>
+  </div>
+</div>
+
+<div id="viewInvestimentos" hidden>
+  <div class="invest-resumo">
+    <div class="tile"><div class="label">Investido (ativo)</div><div class="val" id="investTotalAtivo">€0</div></div>
+    <div class="tile"><div class="label">Lucro realizado</div><div class="val" id="investTotalLucro">€0</div></div>
+  </div>
+
+  <h2 class="hist-titulo" id="investTitulo">Investimentos — Tiago</h2>
+
+  <div class="extrato">
+    <div class="extrato-head"><div class="tipo">Ativos</div></div>
+    <div id="investAtivosLista"></div>
+    <div class="add-row">
+      <input type="text" id="investNovoNome" placeholder="Nome (ex: Ações XYZ)">
+      <input type="number" id="investNovoValor" step="0.01" placeholder="€ investido">
+      <button id="investAddBtn">Adicionar</button>
+    </div>
+  </div>
+
+  <div class="extrato">
+    <div class="extrato-head"><div class="tipo">Lucro realizado</div></div>
+    <div id="investRetiradosLista"></div>
+  </div>
+</div>
+
+<footer>Os dados ficam guardados neste dispositivo.</footer>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'custos-mensais-pessoas-v2';
+  var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var nomesPessoa = { tiago:'Tiago', claudia:'Cláudia', casal:'Casal' };
+
+  var agora = new Date();
+  var anoAtual = agora.getFullYear();
+  var mesAtual = agora.getMonth();
+  var pessoaAtual = 'tiago';
+
+  function chave(ano, mes){ return ano + '-' + String(mes+1).padStart(2,'0'); }
+  function mesVazio(){ return { salario: 0, fixo: [], opcional: [] }; }
+  function uid(){ return 'x' + Math.random().toString(36).slice(2,9); }
+  function euros(n){ return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(n||0); }
+  function somaLista(lista){ return lista.reduce(function(s,i){ return s + (Number(i.valor)||0); }, 0); }
+
+  function investVazio(){ return { ativos: [], retirados: [] }; }
+  var dadosDefault = { tiago:{}, claudia:{}, casalOpcional:{}, investimentos:{ tiago: investVazio(), claudia: investVazio(), casal: investVazio() } };
+
+  function carregar(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return dadosDefault;
+  }
+  function guardar(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(dados)); }catch(e){} }
+
+  var dados = carregar();
+  if(!dados.tiago) dados.tiago = {};
+  if(!dados.claudia) dados.claudia = {};
+  if(!dados.casalOpcional) dados.casalOpcional = {};
+  if(!dados.investimentos || Array.isArray(dados.investimentos.ativos)){
+    var antigo = dados.investimentos;
+    dados.investimentos = { tiago: antigo || investVazio(), claudia: investVazio(), casal: investVazio() };
+  }
+  if(!dados.investimentos.tiago) dados.investimentos.tiago = investVazio();
+  if(!dados.investimentos.claudia) dados.investimentos.claudia = investVazio();
+  if(!dados.investimentos.casal) dados.investimentos.casal = investVazio();
+
+  function mesPessoa(pessoa, ano, mes){
+    var k = chave(ano, mes);
+    if(!dados[pessoa][k]) dados[pessoa][k] = mesVazio();
+    return dados[pessoa][k];
+  }
+  function casalOpcionalMes(ano, mes){
+    var k = chave(ano, mes);
+    if(!dados.casalOpcional[k]) dados.casalOpcional[k] = { opcional: [] };
+    return dados.casalOpcional[k];
+  }
+
+  // Devolve uma vista combinada { salario, fixo:[{nome,valor,origem}], opcional:[...] } para qualquer pessoa,
+  // incluindo 'casal' (soma de tiago+cláudia + opcionais próprios do casal).
+  function vistaMes(pessoa, ano, mes){
+    if(pessoa === 'casal'){
+      var t = mesPessoa('tiago', ano, mes), c = mesPessoa('claudia', ano, mes);
+      var extra = casalOpcionalMes(ano, mes);
+      var fixo = t.fixo.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:'tiago' }; })
+        .concat(c.fixo.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:'claudia' }; }));
+      var opcional = t.opcional.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:'tiago' }; })
+        .concat(c.opcional.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:'claudia' }; }))
+        .concat(extra.opcional.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:null }; }));
+      return { salario: (t.salario||0) + (c.salario||0), fixo: fixo, opcional: opcional };
+    }
+    var m = mesPessoa(pessoa, ano, mes);
+    return {
+      salario: m.salario,
+      fixo: m.fixo.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:undefined }; }),
+      opcional: m.opcional.map(function(i){ return { id:i.id, nome:i.nome, valor:i.valor, origem:undefined }; })
+    };
+  }
+
+  function renderNav(){
+    document.getElementById('mesAtualLabel').textContent =
+      meses[mesAtual].charAt(0).toUpperCase() + meses[mesAtual].slice(1) + ' ' + anoAtual;
+  }
+
+  function renderSalarioBox(){
+    var box = document.getElementById('salarioBox');
+    box.innerHTML = '';
+    if(pessoaAtual === 'casal'){
+      var v = vistaMes('casal', anoAtual, mesAtual);
+      box.innerHTML = '<label>Salário combinado</label><div class="val-combinado">' + euros(v.salario) + '</div>';
+      return;
+    }
+    var label = document.createElement('label');
+    label.textContent = 'Salário recebido';
+    var wrap = document.createElement('div');
+    wrap.className = 'valor-wrap';
+    var span = document.createElement('span');
+    span.textContent = '€';
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.01';
+    input.placeholder = '0,00';
+    var m = mesPessoa(pessoaAtual, anoAtual, mesAtual);
+    input.value = m.salario || '';
+    input.oninput = function(){
+      m.salario = parseFloat(input.value) || 0;
+      guardar();
+      atualizarTotaisMes();
+    };
+    wrap.appendChild(span);
+    wrap.appendChild(input);
+    box.appendChild(label);
+    box.appendChild(wrap);
+  }
+
+  function copiarFixosDoMesAnterior(){
+    var m = mesAtual - 1, a = anoAtual;
+    if(m < 0){ m = 11; a = anoAtual - 1; }
+    var anterior = dados[pessoaAtual][chave(a, m)];
+    if(!anterior || anterior.fixo.length === 0) return;
+    var atual = mesPessoa(pessoaAtual, anoAtual, mesAtual);
+    atual.fixo = anterior.fixo.map(function(item){ return { id: uid(), nome: item.nome, valor: item.valor }; });
+    guardar();
+    renderTudo();
+  }
+
+  function renderSecao(containerId, chaveTipo, titulo, tipoClasse){
+    var container = document.getElementById(containerId);
+    container.innerHTML = '';
+    var vista = vistaMes(pessoaAtual, anoAtual, mesAtual);
+    var lista = vista[chaveTipo];
+    var subtotal = somaLista(lista);
+    var casalFixoReadonly = (pessoaAtual === 'casal' && chaveTipo === 'fixo');
+
+    var box = document.createElement('div');
+    box.className = 'extrato';
+
+    var head = document.createElement('div');
+    head.className = 'extrato-head';
+    head.innerHTML = '<div class="tipo"><span class="dot ' + tipoClasse + '"></span>' + titulo + '</div><div class="subtotal">' + euros(subtotal) + '</div>';
+    box.appendChild(head);
+
+    if(lista.length === 0){
+      var vazio = document.createElement('div');
+      vazio.className = 'vazio';
+      var texto = document.createElement('span');
+      texto.textContent = 'Sem lançamentos ainda.';
+      vazio.appendChild(texto);
+      if(chaveTipo === 'fixo' && pessoaAtual !== 'casal'){
+        var m0 = mesAtual - 1, a0 = anoAtual;
+        if(m0 < 0){ m0 = 11; a0 = anoAtual - 1; }
+        var anterior = dados[pessoaAtual][chave(a0, m0)];
+        if(anterior && anterior.fixo.length > 0){
+          var copiarBtn = document.createElement('button');
+          copiarBtn.textContent = 'Copiar fixos do mês anterior';
+          copiarBtn.addEventListener('click', copiarFixosDoMesAnterior);
+          vazio.appendChild(copiarBtn);
+        }
+      }
+      box.appendChild(vazio);
+    }
+
+    lista.forEach(function(item){
+      var row = document.createElement('div');
+      row.className = 'linha';
+      var readonly = casalFixoReadonly || (pessoaAtual === 'casal' && item.origem);
+
+      if(item.origem){
+        var tag = document.createElement('span');
+        tag.className = 'tag ' + item.origem;
+        tag.textContent = item.origem === 'tiago' ? 'T' : 'C';
+        row.appendChild(tag);
+      }
+
+      if(readonly){
+        var nomeFixo = document.createElement('div');
+        nomeFixo.className = 'nome-fixo';
+        nomeFixo.textContent = item.nome;
+        row.appendChild(nomeFixo);
+        var valorFixo = document.createElement('div');
+        valorFixo.className = 'valor-fixo';
+        valorFixo.textContent = euros(item.valor);
+        row.appendChild(valorFixo);
+      } else {
+        var nomeInput = document.createElement('input');
+        nomeInput.type = 'text';
+        nomeInput.value = item.nome;
+        nomeInput.addEventListener('change', function(){
+          item.nome = nomeInput.value;
+          var alvo = chaveTipo === 'opcional' && pessoaAtual === 'casal' ? casalOpcionalMes(anoAtual, mesAtual).opcional : mesPessoa(pessoaAtual, anoAtual, mesAtual)[chaveTipo];
+          var original = alvo.filter(function(i){ return i.id === item.id; })[0];
+          if(original) original.nome = nomeInput.value;
+          guardar();
+        });
+
+        var valorWrap = document.createElement('div');
+        valorWrap.className = 'valor-wrap';
+        var valorInput = document.createElement('input');
+        valorInput.type = 'number';
+        valorInput.step = '0.01';
+        valorInput.value = item.valor;
+        valorInput.addEventListener('change', function(){
+          var novo = parseFloat(valorInput.value) || 0;
+          var alvo = chaveTipo === 'opcional' && pessoaAtual === 'casal' ? casalOpcionalMes(anoAtual, mesAtual).opcional : mesPessoa(pessoaAtual, anoAtual, mesAtual)[chaveTipo];
+          var original = alvo.filter(function(i){ return i.id === item.id; })[0];
+          if(original) original.valor = novo;
+          guardar();
+          renderTudo();
+        });
+        var span = document.createElement('span');
+        span.textContent = '€';
+        valorWrap.appendChild(span);
+        valorWrap.appendChild(valorInput);
+
+        var delBtn = document.createElement('button');
+        delBtn.textContent = '×';
+        delBtn.title = 'Remover';
+        delBtn.addEventListener('click', function(){
+          if(chaveTipo === 'opcional' && pessoaAtual === 'casal'){
+            var extra = casalOpcionalMes(anoAtual, mesAtual);
+            extra.opcional = extra.opcional.filter(function(i){ return i.id !== item.id; });
+          } else {
+            var m = mesPessoa(pessoaAtual, anoAtual, mesAtual);
+            m[chaveTipo] = m[chaveTipo].filter(function(i){ return i.id !== item.id; });
+          }
+          guardar();
+          renderTudo();
+        });
+
+        row.appendChild(nomeInput);
+        row.appendChild(valorWrap);
+        row.appendChild(delBtn);
+      }
+      box.appendChild(row);
+    });
+
+    if(!casalFixoReadonly){
+      var addRow = document.createElement('div');
+      addRow.className = 'add-row';
+      var addNome = document.createElement('input');
+      addNome.type = 'text';
+      addNome.placeholder = pessoaAtual === 'casal' && chaveTipo === 'opcional' ? 'Novo custo conjunto' : 'Novo lançamento';
+      var addValor = document.createElement('input');
+      addValor.type = 'number';
+      addValor.step = '0.01';
+      addValor.placeholder = '€';
+      var addBtn = document.createElement('button');
+      addBtn.textContent = 'Adicionar';
+
+      function addItem(){
+        var nome = addNome.value.trim();
+        if(!nome) return;
+        var novo = { id: uid(), nome: nome, valor: parseFloat(addValor.value) || 0 };
+        if(chaveTipo === 'opcional' && pessoaAtual === 'casal'){
+          casalOpcionalMes(anoAtual, mesAtual).opcional.push(novo);
+        } else {
+          mesPessoa(pessoaAtual, anoAtual, mesAtual)[chaveTipo].push(novo);
+        }
+        guardar();
+        renderTudo();
+      }
+      addBtn.addEventListener('click', addItem);
+      addNome.addEventListener('keydown', function(e){ if(e.key === 'Enter') addItem(); });
+      addValor.addEventListener('keydown', function(e){ if(e.key === 'Enter') addItem(); });
+
+      addRow.appendChild(addNome);
+      addRow.appendChild(addValor);
+      addRow.appendChild(addBtn);
+      box.appendChild(addRow);
+    }
+
+    container.appendChild(box);
+  }
+
+  function atualizarTotaisMes(){
+    var vista = vistaMes(pessoaAtual, anoAtual, mesAtual);
+    var totalFixo = somaLista(vista.fixo);
+    var totalOpcional = somaLista(vista.opcional);
+    var saldo = vista.salario - (totalFixo + totalOpcional);
+    document.getElementById('totalSalario').textContent = euros(vista.salario);
+    document.getElementById('totalFixo').textContent = euros(totalFixo);
+    document.getElementById('totalOpcional').textContent = euros(totalOpcional);
+    var saldoEl = document.getElementById('totalSaldo');
+    saldoEl.textContent = euros(saldo);
+    saldoEl.className = 'val ' + (saldo < 0 ? 'negativo' : 'positivo');
+  }
+
+  function renderHistorico(){
+    document.getElementById('histTitulo').textContent = 'Histórico — ' + nomesPessoa[pessoaAtual] + ' — ' + anoAtual;
+    var body = document.getElementById('histBody');
+    body.innerHTML = '';
+    var anoTotalFixo = 0, anoTotalOpcional = 0;
+
+    for(var m = 0; m < 12; m++){
+      var vista = vistaMes(pessoaAtual, anoAtual, m);
+      var tr = document.createElement('tr');
+      if(m === mesAtual) tr.className = 'ativo';
+      var tf = somaLista(vista.fixo), to = somaLista(vista.opcional);
+
+      if(tf === 0 && to === 0){
+        tr.classList.add('sem-dados');
+        tr.innerHTML = '<td>' + meses[m] + '</td><td>—</td><td>—</td><td>—</td>';
+      } else {
+        anoTotalFixo += tf; anoTotalOpcional += to;
+        tr.innerHTML = '<td>' + meses[m] + '</td><td>' + euros(tf) + '</td><td>' + euros(to) + '</td><td class="total-col">' + euros(tf+to) + '</td>';
+      }
+      (function(mesClicado){ tr.addEventListener('click', function(){ mesAtual = mesClicado; renderTudo(); }); })(m);
+      body.appendChild(tr);
+    }
+
+    document.getElementById('histTotalFixo').textContent = euros(anoTotalFixo);
+    document.getElementById('histTotalOpcional').textContent = euros(anoTotalOpcional);
+    document.getElementById('histTotalGeral').textContent = euros(anoTotalFixo + anoTotalOpcional);
+  }
+
+  function corVar(nome){ return getComputedStyle(document.documentElement).getPropertyValue(nome).trim(); }
+
+  function renderGrafico(){
+    document.getElementById('graficoAno').textContent = 'Gastos — ' + nomesPessoa[pessoaAtual] + ' — ' + anoAtual;
+
+    var valores = [], maxTotal = 0, mesMax = -1;
+    for(var m = 0; m < 12; m++){
+      var vista = vistaMes(pessoaAtual, anoAtual, m);
+      var tf = somaLista(vista.fixo), to = somaLista(vista.opcional), total = tf + to;
+      valores.push({ fixo: tf, opcional: to, total: total });
+      if(total > maxTotal){ maxTotal = total; mesMax = m; }
+    }
+
+    var destaqueEl = document.getElementById('graficoDestaque');
+    destaqueEl.innerHTML = (mesMax >= 0 && maxTotal > 0)
+      ? 'Maior gasto: <b>' + meses[mesMax] + '</b> (' + euros(maxTotal) + ')'
+      : 'Ainda sem dados este ano.';
+
+    var escala = maxTotal > 0 ? maxTotal : 1;
+    var w = 600, h = 260;
+    var padLeft = 46, padBottom = 28, padTop = 10, padRight = 10;
+    var areaW = w - padLeft - padRight, areaH = h - padTop - padBottom;
+    var colW = areaW / 12, barW = colW * 0.52;
+
+    var corFixo = corVar('--fixo'), corOpcional = corVar('--opcional'), corMuted = corVar('--muted'), corLine = corVar('--line'), corFg = corVar('--fg'), corAccent = corVar('--accent');
+
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" style="display:block;font-family:Inter,sans-serif">';
+    [0, 0.5, 1].forEach(function(frac){
+      var y = padTop + areaH * (1 - frac);
+      svg += '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (w - padRight) + '" y2="' + y + '" stroke="' + corLine + '" stroke-width="1"/>';
+      svg += '<text x="' + (padLeft - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="' + corMuted + '">' + euros(escala * frac).replace(/\s/g,'') + '</text>';
+    });
+
+    for(var m2 = 0; m2 < 12; m2++){
+      var v = valores[m2];
+      var x = padLeft + colW * m2 + (colW - barW) / 2;
+      var hFixo = escala > 0 ? (v.fixo / escala) * areaH : 0;
+      var hOpcional = escala > 0 ? (v.opcional / escala) * areaH : 0;
+      var yFixoTop = padTop + areaH - hFixo;
+      var yOpcionalTop = yFixoTop - hOpcional;
+
+      if(v.fixo > 0) svg += '<rect x="' + x + '" y="' + yFixoTop + '" width="' + barW + '" height="' + hFixo + '" fill="' + corFixo + '" rx="2"/>';
+      if(v.opcional > 0) svg += '<rect x="' + x + '" y="' + yOpcionalTop + '" width="' + barW + '" height="' + hOpcional + '" fill="' + corOpcional + '" rx="2"/>';
+
+      var corLabel = (m2 === mesMax && v.total > 0) ? corAccent : corMuted;
+      var pesoLabel = (m2 === mesMax && v.total > 0) ? '600' : '400';
+      svg += '<text x="' + (x + barW/2) + '" y="' + (h - padBottom + 15) + '" text-anchor="middle" font-size="10" font-weight="' + pesoLabel + '" fill="' + corLabel + '">' + mesesAbrev[m2] + '</text>';
+      if(v.total > 0) svg += '<text x="' + (x + barW/2) + '" y="' + (yOpcionalTop - 5) + '" text-anchor="middle" font-size="9" fill="' + corFg + '" font-variant-numeric="tabular-nums">' + Math.round(v.total) + '€</text>';
+    }
+    svg += '</svg>';
+    document.getElementById('graficoSvgWrap').innerHTML = svg;
+  }
+
+  function renderInvestimentos(){
+    var invest = dados.investimentos[pessoaAtual];
+    document.getElementById('investTitulo').textContent = 'Investimentos — ' + nomesPessoa[pessoaAtual];
+    var ativosLista = document.getElementById('investAtivosLista');
+    var retiradosLista = document.getElementById('investRetiradosLista');
+    ativosLista.innerHTML = ''; retiradosLista.innerHTML = '';
+
+    var totalAtivo = invest.ativos.reduce(function(s,i){ return s + (Number(i.valor)||0); }, 0);
+    document.getElementById('investTotalAtivo').textContent = euros(totalAtivo);
+
+    if(invest.ativos.length === 0){
+      var vazio1 = document.createElement('div');
+      vazio1.className = 'vazio';
+      vazio1.textContent = 'Sem investimentos ativos.';
+      ativosLista.appendChild(vazio1);
+    }
+
+    invest.ativos.forEach(function(inv){
+      var row = document.createElement('div');
+      row.className = 'invest-linha';
+      var nomeEl = document.createElement('div');
+      nomeEl.className = 'nome';
+      nomeEl.textContent = inv.nome;
+      var valorEl = document.createElement('div');
+      valorEl.className = 'valor';
+      valorEl.textContent = euros(inv.valor);
+      var retirarBtn = document.createElement('button');
+      retirarBtn.textContent = 'Retirar';
+      var removerBtn = document.createElement('button');
+      removerBtn.className = 'remover';
+      removerBtn.textContent = '×';
+      removerBtn.title = 'Remover';
+      removerBtn.addEventListener('click', function(){
+        invest.ativos = invest.ativos.filter(function(i){ return i.id !== inv.id; });
+        guardar();
+        renderInvestimentos();
+      });
+      row.appendChild(nomeEl); row.appendChild(valorEl); row.appendChild(retirarBtn); row.appendChild(removerBtn);
+
+      var formWrap = document.createElement('div');
+      formWrap.style.width = '100%';
+      retirarBtn.addEventListener('click', function(){
+        if(formWrap.childElementCount > 0){ formWrap.innerHTML = ''; return; }
+        var form = document.createElement('div');
+        form.className = 'retirar-form';
+        var input = document.createElement('input');
+        input.type = 'number'; input.step = '0.01'; input.placeholder = '€ retirado';
+        var confirmBtn = document.createElement('button');
+        confirmBtn.textContent = 'Confirmar';
+        confirmBtn.addEventListener('click', function(){
+          var valorRetirado = parseFloat(input.value);
+          if(isNaN(valorRetirado)) return;
+          invest.ativos = invest.ativos.filter(function(i){ return i.id !== inv.id; });
+          invest.retirados.push({ id: uid(), nome: inv.nome, valorInvestido: inv.valor, valorRetirado: valorRetirado, data: new Date().toISOString().slice(0,10) });
+          guardar();
+          renderInvestimentos();
+        });
+        form.appendChild(input); form.appendChild(confirmBtn);
+        formWrap.appendChild(form);
+      });
+
+      ativosLista.appendChild(row);
+      ativosLista.appendChild(formWrap);
+    });
+
+    var totalLucro = 0;
+    if(invest.retirados.length === 0){
+      var vazio2 = document.createElement('div');
+      vazio2.className = 'vazio';
+      vazio2.textContent = 'Ainda sem retiradas.';
+      retiradosLista.appendChild(vazio2);
+    }
+    invest.retirados.slice().reverse().forEach(function(inv){
+      var lucro = inv.valorRetirado - inv.valorInvestido;
+      var pct = inv.valorInvestido > 0 ? (lucro / inv.valorInvestido * 100) : 0;
+      totalLucro += lucro;
+      var row = document.createElement('div');
+      row.className = 'invest-linha';
+      var nomeEl = document.createElement('div');
+      nomeEl.className = 'nome';
+      nomeEl.innerHTML = inv.nome + '<br><span class="meta">investido ' + euros(inv.valorInvestido) + ' · retirado ' + euros(inv.valorRetirado) + '</span>';
+      var lucroEl = document.createElement('div');
+      lucroEl.className = 'valor ' + (lucro >= 0 ? 'lucro-pos' : 'lucro-neg');
+      lucroEl.textContent = (lucro >= 0 ? '+' : '') + euros(lucro) + ' (' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%)';
+      row.appendChild(nomeEl); row.appendChild(lucroEl);
+      retiradosLista.appendChild(row);
+    });
+
+    var lucroTotalEl = document.getElementById('investTotalLucro');
+    lucroTotalEl.textContent = euros(totalLucro);
+    lucroTotalEl.className = 'val ' + (totalLucro < 0 ? 'lucro-neg' : 'lucro-pos');
+  }
+
+  document.getElementById('investAddBtn').addEventListener('click', function(){
+    var nomeEl = document.getElementById('investNovoNome');
+    var valorEl = document.getElementById('investNovoValor');
+    var nome = nomeEl.value.trim();
+    if(!nome) return;
+    dados.investimentos[pessoaAtual].ativos.push({ id: uid(), nome: nome, valor: parseFloat(valorEl.value) || 0 });
+    nomeEl.value = ''; valorEl.value = '';
+    guardar();
+    renderInvestimentos();
+  });
+
+  function mostrarTab(tab){
+    document.getElementById('viewExtrato').hidden = tab !== 'extrato';
+    document.getElementById('viewGrafico').hidden = tab !== 'grafico';
+    document.getElementById('viewInvestimentos').hidden = tab !== 'investimentos';
+    document.getElementById('tabExtrato').classList.toggle('ativo', tab === 'extrato');
+    document.getElementById('tabGrafico').classList.toggle('ativo', tab === 'grafico');
+    document.getElementById('tabInvestimentos').classList.toggle('ativo', tab === 'investimentos');
+    if(tab === 'grafico') renderGrafico();
+    if(tab === 'investimentos') renderInvestimentos();
+  }
+  document.getElementById('tabExtrato').addEventListener('click', function(){ mostrarTab('extrato'); });
+  document.getElementById('tabGrafico').addEventListener('click', function(){ mostrarTab('grafico'); });
+  document.getElementById('tabInvestimentos').addEventListener('click', function(){ mostrarTab('investimentos'); });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.pessoa-tabs button'), function(btn){
+    btn.addEventListener('click', function(){
+      pessoaAtual = btn.getAttribute('data-p');
+      Array.prototype.forEach.call(document.querySelectorAll('.pessoa-tabs button'), function(b){ b.classList.toggle('ativo', b === btn); });
+      renderTudo();
+      if(!document.getElementById('viewInvestimentos').hidden) renderInvestimentos();
+    });
+  });
+
+  function renderTudo(){
+    renderNav();
+    renderSalarioBox();
+    renderSecao('secaoFixo', 'fixo', 'Custos Fixos', 'fixo');
+    renderSecao('secaoOpcional', 'opcional', 'Custos Opcionais', 'opcional');
+    atualizarTotaisMes();
+    renderHistorico();
+    if(!document.getElementById('viewGrafico').hidden) renderGrafico();
+  }
+
+  document.getElementById('btnPrev').addEventListener('click', function(){
+    mesAtual--; if(mesAtual < 0){ mesAtual = 11; anoAtual--; }
+    renderTudo();
+  });
+  document.getElementById('btnNext').addEventListener('click', function(){
+    mesAtual++; if(mesAtual > 11){ mesAtual = 0; anoAtual++; }
+    renderTudo();
+  });
+
+  renderTudo();
+})();
+</script>
