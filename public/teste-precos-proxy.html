@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste Preço (via servidor)</title>
+<style>
+:root{
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3;
+  --fg:#2b2620; --muted:#8a8070;
+  --accent:#b5572e; --accent-fg:#ffffff;
+  --ok:#5b7a63; --erro:#b5572e;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1c1a17; --surface:#242120; --border:#3a342c;
+    --fg:#ece6dc; --muted:#978d7c;
+    --accent:#e08358; --accent-fg:#1c1a17;
+    --ok:#8bb092; --erro:#e08358;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;padding:24px 16px;max-width:480px;margin:0 auto}
+h1{font-size:1.3rem;margin:0 0 16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.linha{display:flex;gap:8px;margin-bottom:10px}
+.linha input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:.95rem}
+.linha button{padding:10px 16px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-size:.9rem;cursor:pointer}
+.linha button:disabled{opacity:.6}
+.resultado{padding:14px;border-radius:8px;font-size:.92rem;line-height:1.6;margin-top:10px}
+.resultado.ok{background:color-mix(in srgb, var(--ok) 14%, var(--surface));border:1px solid var(--ok)}
+.resultado.erro{background:color-mix(in srgb, var(--erro) 14%, var(--surface));border:1px solid var(--erro)}
+.preco{font-size:1.8rem;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<h1>Teste de Preço (via servidor)</h1>
+<div class="card">
+  <div class="linha">
+    <input type="text" id="ticker" value="AAPL">
+    <button id="btn">Testar</button>
+  </div>
+  <div id="resultado"></div>
+</div>
+
+<script>
+var btn = document.getElementById('btn');
+var input = document.getElementById('ticker');
+var resultadoEl = document.getElementById('resultado');
+
+async function testar(){
+  var symbol = input.value.trim().toUpperCase();
+  if(!symbol) return;
+  btn.disabled = true; btn.textContent = 'A testar…';
+  resultadoEl.innerHTML = '';
+  try{
+    var resp = await fetch('/api/preco?symbol=' + encodeURIComponent(symbol));
+    var dados = await resp.json();
+    if(!resp.ok) throw new Error(dados.erro || ('HTTP ' + resp.status));
+    resultadoEl.innerHTML =
+      '<div class="resultado ok">' +
+      '<div>' + dados.symbol + '</div>' +
+      '<div class="preco">$' + dados.preco.toFixed(2) + '</div>' +
+      '<div>Variação: ' + (dados.variacao >= 0 ? '+' : '') + dados.variacao.toFixed(2) + ' (' + dados.variacaoPct.toFixed(2) + '%)</div>' +
+      '</div>';
+  }catch(e){
+    resultadoEl.innerHTML = '<div class="resultado erro">' + e.message + '</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Testar';
+  }
+}
+btn.addEventListener('click', testar);
+input.addEventListener('keydown', function(e){ if(e.key === 'Enter') testar(); });
+</script>
+</body>
+</html>
