@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#b5572e">
+<title>Gestão — Custos Mensais</title>
+<style>
+:root{
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#8a8070;
+  --accent:#b5572e; --accent-fg:#ffffff; --ok:#5b7a63; --erro:#b5372e;
+  --radius:12px; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1c1a17; --surface:#242120; --border:#3a342c; --fg:#ece6dc; --muted:#978d7c;
+    --accent:#e08358; --accent-fg:#1c1a17; --ok:#8bb092; --erro:#e08358; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;margin:0 auto;padding:20px 16px 40px;max-width:640px;line-height:1.5}
+h1{font-family:Georgia,serif;font-size:1.5rem;margin:8px 0 4px}
+h2{font-size:1.05rem;margin:0 0 6px}
+h3{font-size:.95rem;margin:18px 0 6px}
+p{margin:0 0 12px;color:var(--muted);font-size:.9rem}
+a.voltar{color:var(--muted);font-size:.85rem;text-decoration:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:16px}
+button{padding:10px 14px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-size:.92rem;cursor:pointer}
+button.sec{background:transparent;border:1px solid var(--border);color:var(--fg)}
+button:disabled{opacity:.55;cursor:default}
+input[type=file]{display:block;margin:6px 0 10px;font-size:.9rem;max-width:100%}
+.msg{margin-top:10px;font-size:.88rem;min-height:1.2em}
+.msg.ok{color:var(--ok)} .msg.erro{color:var(--erro)}
+hr{border:none;border-top:1px solid var(--border);margin:18px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:12px}
+td{padding:7px 0;border-bottom:1px solid var(--border);vertical-align:top}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.barra{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:4px 0 2px}
+.barra i{display:block;height:100%;background:var(--ok)}
+.barra i.alto{background:var(--erro)}
+.nota{font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<a class="voltar" href="/">← Voltar à app</a>
+<h1>Gestão</h1>
+<p>Página escondida: não tem ligação a partir da app. Guarda este endereço nos favoritos.</p>
+
+<section class="card">
+  <h2>Cópia completa</h2>
+  <p>Descarrega um único ficheiro com todos os dados e todas as faturas (com as fotos). Guarda-o fora do site (no telemóvel ou na nuvem), por exemplo uma vez por mês.</p>
+  <button id="btnCopia" type="button">Descarregar cópia completa</button>
+  <div class="msg" id="progCopia" role="status"></div>
+  <hr>
+  <h3>Importar uma cópia</h3>
+  <p>Substitui os dados atuais pelos do ficheiro e repõe as faturas. Antes, o site guarda automaticamente uma cópia do estado atual (fica na lista de Cópias de segurança da app).</p>
+  <input type="file" id="ficheiro" accept="application/json,.json">
+  <div class="msg" id="resImport" role="status"></div>
+  <button id="btnImportar" type="button" hidden>Substituir os dados atuais por esta cópia</button>
+</section>
+
+<section class="card">
+  <h2>Estado do armazenamento</h2>
+  <div id="estado">A carregar…</div>
+  <button id="btnEstado" type="button" class="sec">Atualizar</button>
+</section>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function fmt(n){
+    if(n === null || n === undefined) return '—';
+    if(n < 1024) return n + ' B';
+    if(n < 1048576) return (n / 1024).toFixed(1).replace('.', ',') + ' KB';
+    return (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  }
+  function msg(el, texto, tipo){ el.textContent = texto; el.className = 'msg' + (tipo ? ' ' + tipo : ''); }
+  function blobParaDataURL(blob){
+    return new Promise(function(resolve, reject){
+      var r = new FileReader();
+      r.onload = function(){ resolve(r.result); };
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  // ---------- Cópia completa ----------
+  async function descarregar(){
+    var btn = $('btnCopia'), prog = $('progCopia');
+    btn.disabled = true;
+    try{
+      msg(prog, 'A ler os dados…');
+      var rd = await fetch('/api/data?modo=v2', { cache:'no-store' });
+      if(!rd.ok) throw new Error('Não foi possível ler os dados (HTTP ' + rd.status + ')');
+      var d = await rd.json();
+      var rf = await fetch('/api/faturas', { cache:'no-store' });
+      if(!rf.ok) throw new Error('Não foi possível ler as faturas (HTTP ' + rf.status + ')');
+      var lista = (await rf.json()).faturas || [];
+      var faturas = [], semFoto = 0;
+      for(var i = 0; i < lista.length; i++){
+        msg(prog, 'A descarregar faturas ' + (i + 1) + ' de ' + lista.length + '…');
+        var f = lista[i], imagem = null;
+        if(f.temImagem){
+          var ri = await fetch('/api/faturas?id=' + encodeURIComponent(f.id));
+          if(ri.ok) imagem = (await blobParaDataURL(await ri.blob())).replace(/^data:[^;]*;base64,/, 'data:image/jpeg;base64,'); else semFoto++;
+        }
+        faturas.push({ id: f.id, meta: f, imagem: imagem });
+      }
+      var saida = { formato:'custos-mensais-backup', versaoFormato:1, exportadoEm:new Date().toISOString(), versaoDados:d.versao, dados:d.dados, faturas:faturas };
+      var blob = new Blob([JSON.stringify(saida)], { type:'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'custos-mensais-copia-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      msg(prog, 'Cópia descarregada: ' + fmt(blob.size) + ', ' + faturas.length + (faturas.length === 1 ? ' fatura' : ' faturas') + (semFoto ? ' (' + semFoto + ' sem conseguir obter a foto)' : '') + '.', semFoto ? 'erro' : 'ok');
+    }catch(e){ msg(prog, 'Falhou: ' + (e.message || e), 'erro'); }
+    btn.disabled = false;
+  }
+
+  // ---------- Importar ----------
+  var pendente = null;
+  function contar(dados){
+    var meses = {}, lanc = 0;
+    ['tiago','claudia'].forEach(function(p){ Object.keys(dados[p] || {}).forEach(function(k){
+      meses[k] = 1; var m = dados[p][k] || {};
+      lanc += (m.fixo || []).length + (m.opcional || []).length;
+    }); });
+    Object.keys(dados.casalOpcional || {}).forEach(function(k){ meses[k] = 1; lanc += ((dados.casalOpcional[k] || {}).opcional || []).length; });
+    return { meses: Object.keys(meses).length, lanc: lanc };
+  }
+  function lerFicheiro(texto){
+    $('btnImportar').hidden = true; pendente = null;
+    var o;
+    try{ o = JSON.parse(texto); }catch(e){ msg($('resImport'), 'O ficheiro não é uma cópia válida.', 'erro'); return; }
+    if(!o || o.formato !== 'custos-mensais-backup' || !o.dados || typeof o.dados !== 'object' || typeof o.dados.tiago !== 'object' || typeof o.dados.claudia !== 'object'){
+      msg($('resImport'), 'Este ficheiro não é uma cópia completa deste site.', 'erro'); return;
+    }
+    var c = contar(o.dados), nf = (o.faturas || []).length, comFoto = (o.faturas || []).filter(function(f){ return f.imagem; }).length;
+    pendente = o;
+    var quando = o.exportadoEm ? new Date(o.exportadoEm).toLocaleString('pt-PT') : 'data desconhecida';
+    msg($('resImport'), 'Cópia de ' + quando + ': ' + c.meses + ' meses, ' + c.lanc + ' lançamentos, ' + nf + ' faturas (' + comFoto + ' com foto). Ainda não foi alterado nada.');
+    $('btnImportar').hidden = false;
+  }
+  async function importar(){
+    if(!pendente) return;
+    if(!confirm('Substituir TODOS os dados atuais por esta cópia? (O estado atual fica guardado nas Cópias de segurança.)')) return;
+    var btn = $('btnImportar'), res = $('resImport'), o = pendente;
+    btn.disabled = true;
+    try{
+      msg(res, 'A restaurar os dados…');
+      var r = await fetch('/api/backups', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ importar:true, confirmar:true, dados:o.dados }) });
+      if(!r.ok){ var j = {}; try{ j = await r.json(); }catch(e){} throw new Error(j.erro || ('HTTP ' + r.status)); }
+      var falhas = 0, fs = o.faturas || [];
+      for(var i = 0; i < fs.length; i++){
+        msg(res, 'A restaurar faturas ' + (i + 1) + ' de ' + fs.length + '…');
+        try{
+          var meta = Object.assign({}, fs[i].meta); delete meta.temImagem;
+          var rf = await fetch('/api/faturas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: fs[i].id, meta: meta, imagem: fs[i].imagem || undefined }) });
+          if(!rf.ok) falhas++;
+        }catch(e){ falhas++; }
+      }
+      msg(res, 'Cópia restaurada.' + (falhas ? ' ' + falhas + ' fatura(s) não foram repostas.' : '') + ' Os telemóveis recebem os dados novos em poucos segundos (ou ao abrir a app).', falhas ? 'erro' : 'ok');
+      btn.hidden = true; pendente = null;
+      carregarEstado();
+    }catch(e){ msg(res, 'Falhou: ' + (e.message || e), 'erro'); }
+    btn.disabled = false;
+  }
+  $('ficheiro').addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){ lerFicheiro(String(r.result)); };
+    r.readAsText(f);
+  });
+  document.addEventListener('admin-importar-texto', function(e){ lerFicheiro(e.detail); });
+  $('btnImportar').addEventListener('click', importar);
+  $('btnCopia').addEventListener('click', descarregar);
+
+  // ---------- Estado ----------
+  function linha(a, b){ return '<tr><td>' + a + '</td><td>' + b + '</td></tr>'; }
+  async function carregarEstado(){
+    var el = $('estado');
+    try{
+      var r = await fetch('/api/estado', { cache:'no-store' });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      var j = await r.json(), rd = j.redis, ap = j.app, h = '<table>';
+      var total = ap.dadosBytes + ap.imagensBytes + ap.backupsBytes;
+      if(rd.memoriaUsada !== null) h += linha('Memória usada no Redis', fmt(rd.memoriaUsada));
+      if(rd.memoriaMax){
+        var pct = Math.round(rd.memoriaUsada / rd.memoriaMax * 100);
+        h += '<tr><td colspan="2">Limite do plano: ' + fmt(rd.memoriaMax) + ' (' + pct + '% usado)<div class="barra"><i class="' + (pct >= 70 ? 'alto' : '') + '" style="width:' + Math.min(100, pct) + '%"></i></div>' +
+             (pct >= 70 ? '<div class="nota" style="color:var(--erro)">Atenção: espaço a acabar. Apaga faturas que já não precisas ou passa a um plano maior.</div>' : '') + '</td></tr>';
+      } else if(rd.memoriaUsada !== null){
+        h += linha('Limite do plano', 'não indicado pelo servidor');
+      }
+      h += linha('Dados do site', fmt(ap.dadosBytes));
+      h += linha('Faturas guardadas', ap.faturas + ' (' + ap.imagens + ' com foto, ' + fmt(ap.imagensBytes) + ')');
+      h += linha('Cópias de segurança automáticas', ap.backups + ' (' + fmt(ap.backupsBytes) + ')');
+      h += linha('Total ocupado pela app', fmt(total));
+      h += linha('Versão dos dados', ap.versaoDados);
+      if(rd.comandosTotal !== null && rd.uptimeSeg && rd.uptimeSeg >= 86400){
+        h += linha('Pedidos ao Redis (média por dia)', Math.round(rd.comandosTotal / (rd.uptimeSeg / 86400)).toLocaleString('pt-PT'));
+      } else if(rd.comandosTotal !== null){
+        h += linha('Pedidos ao Redis (desde o arranque)', rd.comandosTotal.toLocaleString('pt-PT'));
+      }
+      h += '</table><p class="nota">Com a app aberta, cada telemóvel consulta o servidor de 15 em 15 segundos. Compara o número de pedidos por dia com o limite do teu plano no painel do Redis.</p>';
+      el.innerHTML = h;
+    }catch(e){ el.textContent = 'Não foi possível ler o estado (' + (e.message || e) + ').'; }
+  }
+  $('btnEstado').addEventListener('click', carregarEstado);
+  carregarEstado();
+})();
+</script>
+</body>
+</html>
