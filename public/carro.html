@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#b5572e">
+<title>Carro elétrico — Custos Mensais</title>
+<style>
+:root{
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#8a8070;
+  --accent:#b5572e; --accent-fg:#ffffff; --ok:#5b7a63; --erro:#b5372e;
+  --radius:12px; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1c1a17; --surface:#242120; --border:#3a342c; --fg:#ece6dc; --muted:#978d7c;
+    --accent:#e08358; --accent-fg:#1c1a17; --ok:#8bb092; --erro:#e08358; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;margin:0 auto;padding:20px 16px 60px;max-width:640px;line-height:1.5}
+h1{font-family:Georgia,serif;font-size:1.5rem;margin:8px 0 4px}
+h2{font-size:1.05rem;margin:0 0 10px}
+p{margin:0 0 12px;color:var(--muted);font-size:.9rem}
+a.voltar{color:var(--muted);font-size:.85rem;text-decoration:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:16px}
+.estado{font-size:.8rem;color:var(--muted)}
+.estado.erro{color:var(--erro)}
+.grelha{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grelha .grande{grid-column:1 / -1}
+.num{background:var(--bg);border-radius:10px;padding:10px 12px}
+.num .r{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.num .v{font-family:Georgia,serif;font-size:1.25rem;font-variant-numeric:tabular-nums}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:3px}
+input[type=number],input[type=text],input[type=date],select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:16px;min-width:0}
+.campo{margin-bottom:10px}
+.linha-check{display:flex;align-items:center;gap:8px;font-size:.88rem;margin:4px 0 10px}
+.linha-check input{width:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+td,th{padding:6px 0;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+td:last-child,th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+th{font-weight:600;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.nota{font-size:.8rem;color:var(--muted);margin-top:8px}
+.eq{font-size:.8rem;color:var(--muted);margin-top:3px}
+.custo{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:end}
+.custo .campo{margin-bottom:2px}
+.custo-bloco{padding:10px 0;border-bottom:1px solid var(--border)}
+.custo-bloco:last-of-type{border-bottom:none}
+button{padding:10px 14px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-size:.92rem;cursor:pointer}
+button.x{background:transparent;color:var(--muted);padding:2px 8px;font-size:1.2rem}
+.reg{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.88rem}
+.reg .d{flex:1;min-width:0}
+.reg .m{font-size:.75rem;color:var(--muted)}
+.reg .v{font-variant-numeric:tabular-nums}
+.add{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.add .grande{grid-column:1 / -1}
+details{margin-top:12px}
+summary{cursor:pointer;font-size:.9rem}
+.scroll{max-height:320px;overflow:auto;margin-top:8px}
+.aviso{margin-top:10px;padding:9px 12px;border-radius:8px;background:var(--bg);font-size:.82rem}
+.pago{color:var(--ok)}
+</style>
+</head>
+<body>
+<a class="voltar" href="/">← Voltar à app</a>
+<h1>Carro elétrico</h1>
+<p>Página escondida: não tem ligação a partir da app. Guarda este endereço nos favoritos. <span id="estado" class="estado" role="status"></span></p>
+
+<section class="card">
+  <h2>Resumo</h2>
+  <div class="grelha">
+    <div class="num grande"><div class="r">Custo total do carro (com juros e custos do crédito)</div><div class="v" id="rTotal">—</div></div>
+    <div class="num"><div class="r">Já pago</div><div class="v" id="rPago">—</div></div>
+    <div class="num"><div class="r">Ainda falta pagar</div><div class="v" id="rFalta">—</div></div>
+    <div class="num"><div class="r">Custo mensal total</div><div class="v" id="rMensal">—</div></div>
+    <div class="num"><div class="r">Custo anual total</div><div class="v" id="rAnual">—</div></div>
+  </div>
+  <div class="nota" id="rProx"></div>
+</section>
+
+<section class="card">
+  <h2>Compra e financiamento</h2>
+  <div class="grelha">
+    <div class="campo"><label for="preco">Preço do carro (€)</label><input type="number" id="preco" data-k="preco" inputmode="decimal" step="0.01"></div>
+    <div class="campo"><label for="sinal">Sinal (€)</label><input type="number" id="sinal" data-k="sinal" inputmode="decimal" step="0.01"></div>
+  </div>
+  <div class="linha-check"><input type="checkbox" id="sinalPago" data-k="sinalPago"><label for="sinalPago" style="margin:0">Sinal já pago</label></div>
+  <div class="grelha">
+    <div class="campo"><label for="entrada">Entrada (€)</label><input type="number" id="entrada" data-k="entrada" inputmode="decimal" step="0.01"></div>
+    <div class="campo"><label for="entradaData">Data da entrada</label><input type="date" id="entradaData" data-k="entradaData"></div>
+  </div>
+  <div class="linha-check"><input type="checkbox" id="entradaPaga" data-k="entradaPaga"><label for="entradaPaga" style="margin:0">Entrada já paga</label></div>
+  <div class="grelha">
+    <div class="campo"><label for="tan">TAN (%)</label><input type="number" id="tan" data-k="tan" inputmode="decimal" step="0.01"></div>
+    <div class="campo"><label for="taeg">TAEG (%)</label><input type="number" id="taeg" data-k="taeg" inputmode="decimal" step="0.01"></div>
+    <div class="campo"><label for="prazo">Prazo (meses)</label><input type="number" id="prazo" data-k="prazo" inputmode="numeric" step="1"></div>
+    <div class="campo"><label for="totalBanco">Total a pagar ao banco (€)</label><input type="number" id="totalBanco" data-k="totalBanco" inputmode="decimal" step="0.01"></div>
+    <div class="campo grande"><label for="primeiraPrestacao">Data da 1.ª prestação (opcional, para ver as datas)</label><input type="date" id="primeiraPrestacao" data-k="primeiraPrestacao"></div>
+  </div>
+  <table id="tabFin"></table>
+  <div class="aviso" id="avisoFin"></div>
+</section>
+
+<section class="card">
+  <h2>Custos de utilização</h2>
+  <div id="custos"></div>
+  <div class="campo" style="margin-top:12px"><label for="kmAno">Quilómetros por ano (opcional, para ver o custo por km)</label><input type="number" id="kmAno" data-k="kmAno" inputmode="numeric" step="100"></div>
+  <table id="tabUso"></table>
+</section>
+
+<section class="card">
+  <h2>Gastos reais</h2>
+  <p>Regista o que vais gastando (carregamentos, revisão, seguro pago…). Serve para comparares com o previsto.</p>
+  <table id="tabReal"></table>
+  <div class="add">
+    <div><label for="rCat">Categoria</label><select id="rCat"><option value="seguro">Seguro</option><option value="manutencao">Manutenção</option><option value="energia">Energia</option><option value="outros">Outros</option></select></div>
+    <div><label for="rData">Data</label><input type="date" id="rData"></div>
+    <div><label for="rDesc">Descrição</label><input type="text" id="rDesc" placeholder="ex.: carregamento"></div>
+    <div><label for="rValor">Valor (€)</label><input type="number" id="rValor" inputmode="decimal" step="0.01"></div>
+    <button type="button" id="rAdd" class="grande">Adicionar gasto</button>
+  </div>
+  <div id="listaReg" style="margin-top:12px"></div>
+</section>
+
+<section class="card">
+  <h2>Calendário de pagamentos</h2>
+  <div id="calendario"></div>
+  <details><summary>Ver todas as prestações</summary><div class="scroll"><table id="tabPrest"></table></div></details>
+</section>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var eur = new Intl.NumberFormat('pt-PT', { style:'currency', currency:'EUR' });
+  var euros = function(n){ return eur.format(Math.round((n || 0) * 100) / 100); };
+  var pct = function(n){ return (Math.round(n * 100) / 100).toLocaleString('pt-PT') + '%'; };
+  var CATS = { seguro:'Seguro', manutencao:'Manutenção', energia:'Energia', outros:'Outros' };
+  var CUSTOS = [['seguro','Seguro'], ['manutencao','Manutenção'], ['energia','Energia (carregamentos)']];
+
+  function padrao(){
+    return { preco:30000, sinal:1000, sinalPago:true, entrada:10000, entradaData:'2027-02-28', entradaPaga:false,
+      tan:6, taeg:7.1, prazo:72, totalBanco:23153, primeiraPrestacao:'',
+      seguro:{ valor:0, periodo:'mensal' }, manutencao:{ valor:0, periodo:'mensal' }, energia:{ valor:0, periodo:'mensal' },
+      kmAno:0, registos:[] };
+  }
+  var versao = 0, d = padrao(), guardarTimer = null, aGuardar = false, sujo = false;
+
+  function get(o, path){ return path.split('.').reduce(function(a, k){ return a == null ? a : a[k]; }, o); }
+  function set(o, path, v){ var p = path.split('.'), k = p.pop(); var t = p.reduce(function(a, x){ if(!a[x]) a[x] = {}; return a[x]; }, o); t[k] = v; }
+  function pad(n){ return String(n).padStart(2, '0'); }
+  function hojeISO(){ var t = new Date(); return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()); }
+  function fmtData(iso){ var p = (iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : '—'; }
+  function addMeses(iso, k){
+    var p = iso.split('-').map(Number), m = p[1] - 1 + k;
+    var ny = p[0] + Math.floor(m / 12), nm = ((m % 12) + 12) % 12, ult = new Date(ny, nm + 1, 0).getDate();
+    return ny + '-' + pad(nm + 1) + '-' + pad(Math.min(p[2], ult));
+  }
+  function pmt(P, r, n){ if(!n) return 0; if(!r) return P / n; return P * r / (1 - Math.pow(1 + r, -n)); }
+  function mensalDe(c){ return !c ? 0 : (c.periodo === 'anual' ? (Number(c.valor) || 0) / 12 : (Number(c.valor) || 0)); }
+  function anualDe(c){ return !c ? 0 : (c.periodo === 'mensal' ? (Number(c.valor) || 0) * 12 : (Number(c.valor) || 0)); }
+
+  function calcular(){
+    var c = {};
+    c.financiado = Math.max(0, (d.preco || 0) - (d.sinal || 0) - (d.entrada || 0));
+    c.prazo = Math.max(0, Math.round(d.prazo || 0));
+    c.prestTAN = pmt(c.financiado, (d.tan || 0) / 1200, c.prazo);
+    c.totalTAN = c.prestTAN * c.prazo;
+    c.totalBanco = d.totalBanco > 0 ? d.totalBanco : c.totalTAN;
+    c.prestacao = c.prazo ? c.totalBanco / c.prazo : 0;
+    c.custoCredito = c.totalBanco - c.financiado;
+    c.dif = c.totalBanco - c.totalTAN;
+    c.custoTotal = (d.sinal || 0) + (d.entrada || 0) + c.totalBanco;
+    // taxa efetiva anual implícita no total indicado (sem contar custos iniciais)
+    var lo = 0, hi = 0.05;
+    if(c.financiado > 0 && c.prazo && c.prestacao > 0){
+      for(var i = 0; i < 60; i++){ var m = (lo + hi) / 2; if(pmt(c.financiado, m, c.prazo) < c.prestacao) lo = m; else hi = m; }
+      c.efetiva = (Math.pow(1 + lo, 12) - 1) * 100;
+    } else c.efetiva = null;
+    var hoje = hojeISO();
+    c.pagas = 0;
+    if(d.primeiraPrestacao){ for(var k = 0; k < c.prazo; k++){ if(addMeses(d.primeiraPrestacao, k) <= hoje) c.pagas++; } }
+    c.pago = (d.sinalPago ? (d.sinal || 0) : 0) + (d.entradaPaga ? (d.entrada || 0) : 0) + c.pagas * c.prestacao;
+    c.falta = Math.max(0, c.custoTotal - c.pago);
+    c.uso = {}; c.usoMes = 0; c.usoAno = 0;
+    CUSTOS.forEach(function(x){ var o = d[x[0]]; c.uso[x[0]] = { mes: mensalDe(o), ano: anualDe(o) }; c.usoMes += mensalDe(o); c.usoAno += anualDe(o); });
+    c.mensal = c.prestacao + c.usoMes;
+    c.anual = c.prestacao * 12 + c.usoAno;
+    return c;
+  }
+
+  function linhaTab(a, b, extra){ return '<tr><td>' + a + '</td><td' + (extra ? ' class="' + extra + '"' : '') + '>' + b + '</td></tr>'; }
+
+  function render(){
+    var c = calcular(), hoje = hojeISO();
+    $('rTotal').textContent = euros(c.custoTotal);
+    $('rPago').textContent = euros(c.pago);
+    $('rFalta').textContent = euros(c.falta);
+    $('rMensal').textContent = euros(c.mensal);
+    $('rAnual').textContent = euros(c.anual);
+    var prox = '';
+    if(!d.entradaPaga && d.entradaData){
+      var dias = Math.round((new Date(d.entradaData + 'T00:00:00') - new Date(hoje + 'T00:00:00')) / 86400000);
+      prox = 'Próximo pagamento: entrada de ' + euros(d.entrada) + ' em ' + fmtData(d.entradaData) + (dias >= 0 ? ' (faltam ' + dias + ' dias)' : ' (já passou a data: marca como paga quando pagares)') + '.';
+    } else if(d.primeiraPrestacao && c.pagas < c.prazo){
+      prox = 'Próxima prestação: ' + euros(c.prestacao) + ' em ' + fmtData(addMeses(d.primeiraPrestacao, c.pagas)) + '.';
+    }
+    $('rProx').textContent = prox;
+
+    var f = '';
+    f += linhaTab('Montante financiado (preço − sinal − entrada)', euros(c.financiado));
+    f += linhaTab('Prestação mensal (total do banco ÷ prazo)', euros(c.prestacao));
+    f += linhaTab('Total a pagar ao banco', euros(c.totalBanco));
+    f += linhaTab('Custo do crédito (juros e custos)', euros(c.custoCredito) + (c.financiado ? ' · ' + pct(c.custoCredito / c.financiado * 100) + ' do financiado' : ''));
+    f += linhaTab('Sobrecusto face ao preço do carro', d.preco ? pct((c.custoTotal - d.preco) / d.preco * 100) : '—');
+    $('tabFin').innerHTML = f;
+    var av = [];
+    if(c.financiado > 0 && c.prazo){
+      av.push('Só com a TAN de ' + pct(d.tan || 0) + ', a prestação seria ' + euros(c.prestTAN) + ' (total ' + euros(c.totalTAN) + ').');
+      if(d.totalBanco > 0) av.push('O total do banco é ' + euros(c.dif) + ' acima disso: o normal são comissões, imposto de selo ou seguros incluídos no TAEG' + (c.efetiva ? ' (taxa efetiva implícita ≈ ' + pct(c.efetiva) + ' ao ano, sem contar custos iniciais; TAEG indicado: ' + pct(d.taeg || 0) + ')' : '') + '. Confirma na ficha de informação do banco.');
+    }
+    $('avisoFin').textContent = av.join(' ');
+    $('avisoFin').hidden = av.length === 0;
+
+    CUSTOS.forEach(function(x){ var u = c.uso[x[0]]; $('eq-' + x[0]).textContent = '= ' + euros(u.mes) + ' por mês · ' + euros(u.ano) + ' por ano'; });
+    var u = '';
+    u += linhaTab('Prestação do crédito', euros(c.prestacao) + '/mês · ' + euros(c.prestacao * 12) + '/ano');
+    u += linhaTab('Seguro + manutenção + energia', euros(c.usoMes) + '/mês · ' + euros(c.usoAno) + '/ano');
+    u += '<tr><td><b>Total</b></td><td><b>' + euros(c.mensal) + '/mês · ' + euros(c.anual) + '/ano</b></td></tr>';
+    if(d.kmAno > 0) u += linhaTab('Custo por km (utilização, sem prestação)', euros(c.usoAno / d.kmAno)) + linhaTab('Custo por km (com prestação)', euros(c.anual / d.kmAno));
+    $('tabUso').innerHTML = u;
+
+    // gastos reais
+    var mesAtual = hoje.slice(0, 7), anoAtual = hoje.slice(0, 4), real = {};
+    Object.keys(CATS).forEach(function(k){ real[k] = { mes: 0, ano: 0 }; });
+    (d.registos || []).forEach(function(r){
+      var cat = real[r.cat] ? r.cat : 'outros';
+      if((r.data || '').slice(0, 7) === mesAtual) real[cat].mes += r.valor;
+      if((r.data || '').slice(0, 4) === anoAtual) real[cat].ano += r.valor;
+    });
+    var t = '<tr><th>Categoria</th><th>Este mês · este ano (previsto mês)</th></tr>';
+    Object.keys(CATS).forEach(function(k){
+      var prev = c.uso[k] ? ' (prev. ' + euros(c.uso[k].mes) + ')' : '';
+      t += linhaTab(CATS[k], euros(real[k].mes) + ' · ' + euros(real[k].ano) + prev);
+    });
+    $('tabReal').innerHTML = t;
+    var cont = $('listaReg'); cont.innerHTML = '';
+    (d.registos || []).slice().sort(function(a, b){ return (b.data || '') < (a.data || '') ? -1 : 1; }).forEach(function(r){
+      var linha = document.createElement('div'); linha.className = 'reg';
+      var dd = document.createElement('div'); dd.className = 'd';
+      var n = document.createElement('div'); n.textContent = r.desc || CATS[r.cat] || 'Gasto';
+      var m = document.createElement('div'); m.className = 'm'; m.textContent = fmtData(r.data) + ' · ' + (CATS[r.cat] || 'Outros');
+      dd.appendChild(n); dd.appendChild(m);
+      var v = document.createElement('div'); v.className = 'v'; v.textContent = euros(r.valor);
+      var x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.title = 'Remover';
+      x.addEventListener('click', function(){ d.registos = d.registos.filter(function(y){ return y.id !== r.id; }); alterado(); });
+      linha.appendChild(dd); linha.appendChild(v); linha.appendChild(x); cont.appendChild(linha);
+    });
+
+    // calendário
+    var cal = '';
+    cal += linhaTab('Sinal de ' + euros(d.sinal), d.sinalPago ? 'pago' : 'por pagar', d.sinalPago ? 'pago' : '');
+    cal += linhaTab('Entrada de ' + euros(d.entrada) + ' · ' + fmtData(d.entradaData), d.entradaPaga ? 'paga' : 'por pagar', d.entradaPaga ? 'pago' : '');
+    cal += linhaTab('Prestações (' + c.prazo + ' × ' + euros(c.prestacao) + ')', d.primeiraPrestacao ? (c.pagas + ' pagas · ' + (c.prazo - c.pagas) + ' por pagar') : 'defina a data da 1.ª prestação');
+    if(d.primeiraPrestacao && c.prazo) cal += linhaTab('Última prestação', fmtData(addMeses(d.primeiraPrestacao, c.prazo - 1)));
+    $('calendario').innerHTML = '<table>' + cal + '</table>';
+    var p = '<tr><th>Nº · data</th><th>Prestação · falta pagar ao banco</th></tr>';
+    for(var i = 0; i < c.prazo; i++){
+      var dt = d.primeiraPrestacao ? fmtData(addMeses(d.primeiraPrestacao, i)) : '—';
+      p += '<tr><td>' + (i + 1) + ' · ' + dt + '</td><td>' + euros(c.prestacao) + ' · ' + euros(c.totalBanco - c.prestacao * (i + 1)) + '</td></tr>';
+    }
+    $('tabPrest').innerHTML = p;
+  }
+
+  function preencher(){
+    document.querySelectorAll('[data-k]').forEach(function(el){
+      var k = el.getAttribute('data-k'), v = get(d, k);
+      var vazioSeZero = /^(seguro|manutencao|energia)\.valor$|^kmAno$/.test(k);
+      if(el.type === 'checkbox') el.checked = !!v;
+      else el.value = (v === undefined || v === null || (vazioSeZero && v === 0)) ? '' : v;
+    });
+  }
+  function montarCustos(){
+    var cont = $('custos');
+    CUSTOS.forEach(function(x){
+      var b = document.createElement('div'); b.className = 'custo-bloco';
+      b.innerHTML = '<div class="custo"><div class="campo"><label for="v-' + x[0] + '">' + x[1] + ' (€)</label><input type="number" id="v-' + x[0] + '" data-k="' + x[0] + '.valor" inputmode="decimal" step="0.01"></div>' +
+        '<div class="campo"><label for="p-' + x[0] + '">Por</label><select id="p-' + x[0] + '" data-k="' + x[0] + '.periodo"><option value="mensal">mês</option><option value="anual">ano</option></select></div></div>' +
+        '<div class="eq" id="eq-' + x[0] + '"></div>';
+      cont.appendChild(b);
+    });
+  }
+
+  // ---------- guardar / carregar ----------
+  function estado(txt, erro){ $('estado').textContent = txt; $('estado').className = 'estado' + (erro ? ' erro' : ''); }
+  function alterado(){
+    render(); sujo = true; estado('A guardar…');
+    clearTimeout(guardarTimer); guardarTimer = setTimeout(guardar, 600);
+  }
+  async function guardar(){
+    if(aGuardar){ guardarTimer = setTimeout(guardar, 400); return; }
+    aGuardar = true; sujo = false;
+    try{
+      var r = await fetch('/api/carro', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ versao: versao, dados: d }) });
+      var j = {}; try{ j = await r.json(); }catch(e){}
+      if(r.ok){ versao = j.versao; estado(sujo ? 'A guardar…' : 'Guardado'); }
+      else if(r.status === 409 && j.dados){
+        versao = j.versao; d = Object.assign(padrao(), j.dados); preencher(); render();
+        estado('Outra pessoa alterou entretanto: mostrei a versão mais recente. Repete a tua alteração, se for preciso.', true);
+        sujo = false;
+      } else throw new Error(j.erro || ('HTTP ' + r.status));
+    }catch(e){ estado('Não foi possível guardar (' + (e.message || e) + '). Tenta de novo.', true); sujo = true; }
+    aGuardar = false;
+    if(sujo && !guardarTimer) guardarTimer = setTimeout(guardar, 3000);
+  }
+  async function carregar(){
+    try{
+      var r = await fetch('/api/carro', { cache:'no-store' });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      var j = await r.json();
+      versao = j.versao || 0;
+      d = Object.assign(padrao(), j.dados || {});
+      estado(j.dados ? 'Guardado' : 'Valores iniciais (ainda não guardados)');
+    }catch(e){ estado('Não foi possível ler os dados (' + (e.message || e) + '). Não alteres nada até voltar a ligação.', true); }
+    preencher(); render();
+  }
+
+  montarCustos();
+  document.addEventListener('input', function(e){
+    var el = e.target, k = el.getAttribute && el.getAttribute('data-k');
+    if(!k) return;
+    var v = el.type === 'checkbox' ? el.checked : (el.type === 'number' ? (el.value === '' ? 0 : parseFloat(el.value)) : el.value);
+    if(el.type === 'number' && isNaN(v)) v = 0;
+    set(d, k, v); alterado();
+  });
+  document.addEventListener('change', function(e){
+    var el = e.target, k = el.getAttribute && el.getAttribute('data-k');
+    if(!k || el.type === 'number') return;
+    set(d, k, el.type === 'checkbox' ? el.checked : el.value); alterado();
+  });
+  $('rData').value = hojeISO();
+  $('rAdd').addEventListener('click', function(){
+    var v = parseFloat($('rValor').value);
+    if(!(v > 0)){ $('rValor').focus(); return; }
+    d.registos = d.registos || [];
+    d.registos.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), cat: $('rCat').value, desc: $('rDesc').value.trim(), valor: v, data: $('rData').value || hojeISO() });
+    $('rValor').value = ''; $('rDesc').value = '';
+    alterado();
+  });
+  window.addEventListener('pagehide', function(){
+    if(sujo){ try{ fetch('/api/carro', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ versao: versao, dados: d }), keepalive: true }); }catch(e){} }
+  });
+  carregar();
+})();
+</script>
+</body>
+</html>
