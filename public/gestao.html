@@ -5,18 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#b5572e">
+<script src="/tema.js"></script>
+<link rel="stylesheet" href="/tema.css">
 <title>Gestão — Custos Mensais</title>
 <style>
 :root{
-  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#8a8070;
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#706757;
   --accent:#b5572e; --accent-fg:#ffffff; --ok:#5b7a63; --erro:#b5372e;
   --radius:12px; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
-  :root{ --bg:#1c1a17; --surface:#242120; --border:#3a342c; --fg:#ece6dc; --muted:#978d7c;
+  :root:not([data-theme="light"]){ --bg:#1c1a17; --surface:#242120; --border:#3a342c; --fg:#ece6dc; --muted:#978d7c;
     --accent:#e08358; --accent-fg:#1c1a17; --ok:#8bb092; --erro:#e08358; color-scheme:dark; }
 }
+:root[data-theme="dark"]{ --bg:#1c1a17; --surface:#242120; --border:#3a342c; --fg:#ece6dc; --muted:#978d7c;
+    --accent:#e08358; --accent-fg:#1c1a17; --ok:#8bb092; --erro:#e08358; color-scheme:dark; }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;margin:0 auto;padding:20px 16px 40px;max-width:640px;line-height:1.5}
 h1{font-family:Georgia,serif;font-size:1.5rem;margin:8px 0 4px}
@@ -48,9 +52,9 @@ td:last-child{text-align:right;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
-<a class="voltar" href="/">← Voltar à app</a>
+<div class="barra-topo"><a class="voltar" href="/">← Voltar à app</a><button type="button" class="btn-tema" aria-label="Mudar para o modo escuro"></button></div>
 <h1>Gestão</h1>
-<p>Página escondida: não tem ligação a partir da app. Guarda este endereço nos favoritos.</p>
+<p>Cópia dos dados, envio por email e estado do armazenamento.</p>
 <p><a href="/carro.html" style="color:var(--accent)">Carro elétrico →</a></p>
 
 <section class="card">

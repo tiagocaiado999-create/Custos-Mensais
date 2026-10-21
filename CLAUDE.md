@@ -32,8 +32,9 @@ Os ficheiros são grandes. Não leias um ficheiro inteiro para mexer numa funç�
   12. `resumo.js`: resumo do mês em frases.
   13. `backups.js`: cópias de segurança (restaurar versões).
   14. `main.js`: abas, navegação de mês, `renderTudo`, registo do service worker, arranque.
-- `carro.html` + `carro.css` + `carro.js`: simulador do carro. **Página escondida**: de propósito não tem ligação a partir da app.
-- `gestao.html`: cópia completa, envio por email, estado do armazenamento. Também **escondida** de propósito.
+- `carro.html` + `carro.css` + `carro.js`: simulador do carro. Chega-se lá por Gestão → "Carro elétrico →"; o "← Voltar à app" leva ao início.
+- `gestao.html`: cópia completa, envio por email, estado do armazenamento. Ligação "Gestão" no topo da página principal, ao lado do botão de tema.
+- `tema.js` + `tema.css`: modo escuro/claro e estilos do topo, em todas as páginas (ver "Tema escuro" abaixo).
 - `login.html` + `auth.js`: página de entrada e o aviso que leva para ela quando a API responde 401 (carregado por todas as páginas).
 - `sw.js`: service worker (rede primeiro, cache offline). `vendor/`: `jsQR`, `xlsx`.
 
@@ -69,3 +70,10 @@ Windows, PowerShell. Atenção: um deploy pendente na Vercel faz parecer que a a
 - Vivem **só na Vercel** (Settings → Environment Variables, Production): `CustoMensal_REDIS_URL`, `SENHA`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_COPIA`. Não há `.env.local`: o projeto não tem servidor local, testa-se como descrito acima.
 - O `.gitignore` bloqueia `.env*`, `.vercel/` e as cópias de dados descarregadas. Se algum dia fizeres `vercel env pull`, o `.env.local` aponta para o Redis **real**: nunca o uses para testes que escrevam dados.
 - Variáveis secretas da Vercel não se leem de volta; para mudar uma, edita-se o valor e faz-se novo deploy.
+
+## Tema escuro/claro
+
+- O botão (`.btn-tema`) está no topo de todas as páginas. A escolha fica em `localStorage` (`custos-tema` = `dark` ou `light`), por dispositivo; sem escolha, segue o tema do sistema. Nunca mudar esta chave.
+- `tema.js` é carregado no **`<head>`** (antes do CSS e de a página aparecer, para não piscar) e põe `data-theme` no `<html>`. Todas as páginas têm de ter `:root:not([data-theme="light"])` dentro do `@media (prefers-color-scheme: dark)` **e** `:root[data-theme="dark"]` com as mesmas variáveis.
+- Cores novas: usar sempre as variáveis (`var(--bg)`, `var(--fg)`…). Gráficos desenhados em JS leem as cores no momento de desenhar, por isso a página principal volta a desenhar tudo quando recebe o evento `tema-mudou` (`js/main.js`).
+- Testar: Chrome headless com o protocolo de depuração (CDP) e o Node do VS Code, guardando `custos-tema` e recarregando.

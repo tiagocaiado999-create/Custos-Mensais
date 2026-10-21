@@ -55,6 +55,9 @@
     window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
   }
 
+  // os gráficos leem as cores do tema no momento em que são desenhados: desenhar de novo quando o tema muda
+  document.addEventListener("tema-mudou", function(){ try{ renderTudo(); }catch(e){} });
+
   (async function iniciar(){
     mostrarEstado('A carregar…');
     var ok = await carregar();
