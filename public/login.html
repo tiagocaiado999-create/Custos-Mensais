@@ -41,7 +41,7 @@ button:disabled{opacity:.6;cursor:default}
 (function(){
   function destino(){
     var v = new URLSearchParams(location.search).get('volta') || '/';
-    return (v.charAt(0) === '/' && v.charAt(1) !== '/' && v.indexOf('\') === -1) ? v : '/';
+    return (v.charAt(0) === '/' && v.charAt(1) !== '/' && v.indexOf(String.fromCharCode(92)) === -1) ? v : '/';
   }
   var form = document.getElementById('form'), erro = document.getElementById('erro'), btn = document.getElementById('entrar');
   fetch('/api/login', { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
