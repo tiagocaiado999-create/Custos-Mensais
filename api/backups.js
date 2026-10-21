@@ -7,6 +7,7 @@ const Redis = require('ioredis');
 const CHAVE = 'custos-mensais-dados';
 const CHAVE_VERSAO = 'custos-mensais-versao';
 const PREFIXO = CHAVE + '-backup';
+const CHAVE_ULTIMA_COPIA = 'custos-mensais-ultima-copia';
 const ID_OK = /^(-original|:\d{4}-\d{2}-\d{2}T\d{2}|-antes:\d{4}-\d{2}-\d{2}T[0-9:.]+Z)$/;
 let cliente;
 
@@ -84,6 +85,13 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'POST') {
       const corpo = req.body || {};
+      if (corpo.copiaDescarregada === true) {
+        // regista que foi descarregada uma cópia completa (a página de gestão mostra a data e avisa quando passa muito tempo)
+        const quando = new Date().toISOString();
+        await redis.set(CHAVE_ULTIMA_COPIA, quando);
+        res.status(200).json({ ok: true, quando });
+        return;
+      }
       if (corpo.importar === true && corpo.confirmar === true) {
         // importar uma cópia completa (feita na página de gestão): substitui os dados, guardando antes o estado atual
         const d = corpo.dados;

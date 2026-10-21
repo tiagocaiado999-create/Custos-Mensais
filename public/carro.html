@@ -94,6 +94,8 @@ th.c,td.c{text-align:right}
     <div class="num"><div class="r">Ainda falta pagar</div><div class="v" id="rFalta">—</div></div>
     <div class="num"><div class="r">Custo mensal total</div><div class="v" id="rMensal">—</div></div>
     <div class="num"><div class="r">Custo anual total</div><div class="v" id="rAnual">—</div></div>
+    <div class="num" id="rAbatBox" hidden><div class="r">Já abatido ao capital</div><div class="v" id="rAbat">—</div></div>
+    <div class="num" id="rPoupBox" hidden><div class="r">Juros poupados (líquido)</div><div class="v verde" id="rPoup">—</div></div>
   </div>
   <div class="nota" id="rProx"></div>
 </section>
@@ -143,9 +145,23 @@ th.c,td.c{text-align:right}
     <div><label for="rData">Data</label><input type="date" id="rData"></div>
     <div><label for="rDesc">Descrição</label><input type="text" id="rDesc" placeholder="ex.: carregamento"></div>
     <div><label for="rValor">Valor (€)</label><input type="number" id="rValor" inputmode="decimal" step="0.01"></div>
+    <div class="grande" id="rEnergia" hidden>
+      <div class="add" style="margin-top:0">
+        <div><label for="rKwh">Energia carregada (kWh)</label><input type="number" id="rKwh" inputmode="decimal" step="0.01"></div>
+        <div><label for="rLocal">Onde carregaste</label><select id="rLocal"><option value="casa">Casa</option><option value="publico">Posto público</option><option value="trabalho">Trabalho</option><option value="outro">Outro</option></select></div>
+        <div class="grande"><label for="rOdo">Quilómetros do carro (conta-quilómetros, opcional)</label><input type="number" id="rOdo" inputmode="numeric" step="1"></div>
+      </div>
+    </div>
     <button type="button" id="rAdd" class="grande">Adicionar gasto</button>
+    <button type="button" id="rCancel" class="grande" hidden style="background:transparent;border:1px solid var(--border);color:var(--fg)">Cancelar edição</button>
   </div>
   <div id="listaReg" style="margin-top:12px"></div>
+</section>
+
+<section class="card">
+  <h2>Consumo real</h2>
+  <p>Calculado a partir dos carregamentos que registas acima (com kWh). Para veres o consumo aos 100 km, regista os quilómetros do carro em pelo menos dois carregamentos.</p>
+  <table id="tabConsumo"></table>
 </section>
 
 <section class="card">
@@ -184,6 +200,18 @@ th.c,td.c{text-align:right}
   <div class="chips" id="abChips"></div>
   <table id="tabAbater"></table>
   <div class="aviso" id="abVeredito"></div>
+  <div id="abRegBloco" hidden>
+    <div class="add">
+      <div><label for="abModo">Aplicar como</label><select id="abModo"><option value="prazo">Reduzir o prazo</option><option value="prestacao">Reduzir a prestação</option></select></div>
+      <div><label for="abData">Data do abatimento</label><input type="date" id="abData"></div>
+      <button type="button" id="abRegistar" class="grande">Registar este abatimento como feito</button>
+    </div>
+    <div class="nota">Ao registares, o capital em dívida, as prestações, o prazo e os juros de toda a página passam a contar com este abatimento (e a comissão). Podes anular na lista abaixo.</div>
+  </div>
+  <div id="abListaBloco" hidden>
+    <h2 style="font-size:.98rem;margin:18px 0 4px">Abatimentos registados</h2>
+    <div id="abLista"></div>
+  </div>
   <div id="abTempoBloco" hidden>
     <h2 style="font-size:.98rem;margin:18px 0 4px">E se abatesses noutra altura?</h2>
     <p class="nota" id="abTempoTxt" style="margin-top:0"></p>
@@ -209,9 +237,10 @@ th.c,td.c{text-align:right}
       pedido:20000, seguroVida:653.25, isCapital:370.01, tan:6, taeg:7, prazo:84, taxaIS:4, prestacaoBase:307.12, totalIndicado:25989.04,
       primeiraPrestacao:'',
       seguro:{ valor:0, periodo:'mensal' }, manutencao:{ valor:0, periodo:'mensal' }, energia:{ valor:0, periodo:'mensal' },
-      kmAno:0, registos:[] };
+      kmAno:0, registos:[], abatimentos:[] };
   }
-  var versao = 0, d = padrao(), guardarTimer = null, aGuardar = false, sujo = false;
+  var LOCAIS = { casa:'Casa', publico:'Posto público', trabalho:'Trabalho', outro:'Outro' };
+  var versao = 0, d = padrao(), guardarTimer = null, aGuardar = false, sujo = false, editId = null;
   var verApos = null, abValor = 0, abApos = null;   // simulações (não são guardadas)
 
   function get(o, path){ return path.split('.').reduce(function(a, k){ return a == null ? a : a[k]; }, o); }
@@ -242,23 +271,60 @@ th.c,td.c{text-align:right}
     return rows;
   }
 
+  // Plano com os abatimentos já feitos (por ordem): cada um reduz o capital depois da prestação indicada,
+  // pagando a comissão do banco, e depois reduz o prazo (mesma prestação) ou a prestação (mesmo prazo).
+  function planoAbat(fin, tm, prazo, base, tis, abs){
+    var rows = [], saldo = r2(fin), saldoIni = saldo, prest = base, k = 0, abatido = 0, comissoes = 0;
+    abs.forEach(function(a){
+      if(saldo <= 0) return;
+      var ate = Math.min(Math.max(k, Math.round(a.apos) || 0), prazo - 1);
+      var seg = plano(saldo, tm, prazo - k, prest, tis), corte = Math.min(ate - k, seg.length);
+      seg.slice(0, corte).forEach(function(r){ r.i += k; rows.push(r); });
+      if(corte) saldo = seg[corte - 1].s;
+      k += corte;
+      if(saldo <= 0) return;
+      var rest = prazo - k, X = Math.min(Math.max(0, a.valor || 0), saldo);
+      var com = r2(X * (rest > 12 ? 0.005 : 0.0025));
+      saldo = r2(saldo - X);
+      if(k > 0) rows[rows.length - 1].s = saldo; else saldoIni = saldo;
+      if(a.modo === 'prestacao' && saldo > 0 && rest > 0) prest = r2(pmt(saldo, tm, rest));
+      abatido += X; comissoes += r2(com + r2(com * 0.04));
+    });
+    plano(saldo, tm, prazo - k, prest, tis).forEach(function(r){ r.i += k; rows.push(r); });
+    return { plano: rows, base: prest, kMin: k, saldoIni: saldoIni, abatido: r2(abatido), comissoes: r2(comissoes) };
+  }
+
   function calcular(){
     var c = {};
     c.financiado = r2((d.pedido || 0) + (d.seguroVida || 0) + (d.isCapital || 0));
     c.prazo = Math.max(0, Math.round(d.prazo || 0));
     c.tm = (d.tan || 0) / 1200;
     c.tis = (d.taxaIS || 0) / 100;
-    c.base = d.prestacaoBase > 0 ? d.prestacaoBase : r2(pmt(c.financiado, c.tm, c.prazo));
-    c.plano = plano(c.financiado, c.tm, c.prazo, c.base, c.tis);
+    c.baseOrig = d.prestacaoBase > 0 ? d.prestacaoBase : r2(pmt(c.financiado, c.tm, c.prazo));
+    var orig = plano(c.financiado, c.tm, c.prazo, c.baseOrig, c.tis);
+    c.jurosOrig = soma(orig, 'j'); c.isOrig = soma(orig, 'is'); c.totalBancoOrig = soma(orig, 'pc');
+    var abs = (d.abatimentos || []).slice().sort(function(a, b){ return (a.apos - b.apos) || ((a.data || '') < (b.data || '') ? -1 : 1); });
+    var pa = planoAbat(c.financiado, c.tm, c.prazo, c.baseOrig, c.tis, abs);
+    c.plano = pa.plano; c.base = pa.base; c.kMin = pa.kMin; c.saldoIni = pa.saldoIni; c.abatido = pa.abatido; c.comissoes = pa.comissoes;
     c.n = c.plano.length;
     c.juros = soma(c.plano, 'j'); c.isJuros = soma(c.plano, 'is'); c.totalBanco = soma(c.plano, 'pc');
-    c.custoCredito = r2(c.totalBanco - (d.pedido || 0));
+    var custoSem = r2(c.jurosOrig + c.isOrig);
+    c.poupanca = r2(custoSem - (c.juros + c.isJuros) - c.comissoes);
+    // poupança de cada abatimento: diferença de custo (juros + imposto + comissões) entre aplicar só os anteriores e aplicá-lo também
+    c.poupAb = {};
+    var antes = custoSem;
+    abs.forEach(function(a, j){
+      var p = planoAbat(c.financiado, c.tm, c.prazo, c.baseOrig, c.tis, abs.slice(0, j + 1));
+      var custo = r2(soma(p.plano, 'j') + soma(p.plano, 'is') + p.comissoes);
+      c.poupAb[a.id] = r2(antes - custo); antes = custo;
+    });
+    c.custoCredito = r2(c.totalBanco + c.abatido + c.comissoes - (d.pedido || 0));
     c.custoTotal = r2((d.preco || 0) + c.custoCredito);
     var hoje = hojeISO();
     c.pagas = 0;
     if(d.primeiraPrestacao){ for(var k = 0; k < c.n; k++){ if(addMeses(d.primeiraPrestacao, k) <= hoje) c.pagas++; } }
     c.pagoPrest = soma(c.plano.slice(0, c.pagas), 'pc');
-    c.pago = r2((d.sinalPago ? (d.sinal || 0) : 0) + (d.entradaPaga ? (d.entrada || 0) : 0) + c.pagoPrest);
+    c.pago = r2((d.sinalPago ? (d.sinal || 0) : 0) + (d.entradaPaga ? (d.entrada || 0) : 0) + c.pagoPrest + c.abatido + c.comissoes);
     c.falta = r2((d.sinalPago ? 0 : (d.sinal || 0)) + (d.entradaPaga ? 0 : (d.entrada || 0)) + c.totalBanco - c.pagoPrest);
     c.prestAtual = c.n ? c.plano[Math.min(c.pagas, c.n - 1)].pc : 0;
     c.uso = {}; c.usoMes = 0; c.usoAno = 0;
@@ -267,7 +333,7 @@ th.c,td.c{text-align:right}
     c.anual = c.prestAtual * 12 + c.usoAno;
     return c;
   }
-  function saldoApos(c, k){ return k <= 0 ? c.financiado : (c.plano[Math.min(k, c.n) - 1] || { s:0 }).s; }
+  function saldoApos(c, k){ return k <= 0 ? c.saldoIni : (c.plano[Math.min(k, c.n) - 1] || { s:0 }).s; }
 
   // Abater parte do capital depois da prestação k
   function abater(c, k, X){
@@ -295,6 +361,8 @@ th.c,td.c{text-align:right}
     $('rFalta').textContent = euros(c.falta);
     $('rMensal').textContent = euros(c.mensal);
     $('rAnual').textContent = euros(c.anual);
+    $('rAbatBox').hidden = $('rPoupBox').hidden = !(c.abatido > 0);
+    $('rAbat').textContent = euros(c.abatido); $('rPoup').textContent = euros(c.poupanca);
     var prox = '';
     if(!d.entradaPaga && d.entradaData){
       var dias = Math.round((new Date(d.entradaData + 'T00:00:00') - new Date(hoje + 'T00:00:00')) / 86400000);
@@ -309,7 +377,12 @@ th.c,td.c{text-align:right}
     f += linhaTab('+ Seguro de vida (prémio único, financiado)', euros(d.seguroVida));
     f += linhaTab('+ Imposto do selo sobre o crédito (financiado)', euros(d.isCapital));
     f += linhaTab('<b>Montante financiado</b>', '<b>' + euros(c.financiado) + '</b>');
-    f += linhaTab('Prestação (sem imposto do selo)', euros(c.base));
+    f += linhaTab('Prestação (sem imposto do selo)', euros(c.baseOrig) + (c.base !== c.baseOrig ? ' · agora: ' + euros(c.base) : ''));
+    if(c.abatido > 0){
+      f += linhaTab('Abatimentos já feitos (capital)', euros(c.abatido));
+      f += linhaTab('Comissões dos abatimentos (com imposto do selo)', euros(c.comissoes));
+      f += linhaTab('<b>Juros e imposto poupados com os abatimentos</b> (já descontadas as comissões)', '<b class="' + (c.poupanca > 0 ? 'verde' : 'verm') + '">' + euros(c.poupanca) + '</b>');
+    }
     if(c.n){
       f += linhaTab('Prestação com imposto do selo', 'a 1.ª: ' + euros(c.plano[0].pc) + ' · a última: ' + euros(c.plano[c.n - 1].pc));
       f += linhaTab('Total a pagar ao banco (' + c.n + ' prestações)', euros(c.totalBanco));
@@ -322,8 +395,8 @@ th.c,td.c{text-align:right}
 
     var av = [];
     if(d.totalIndicado > 0){
-      var dif = r2(c.totalBanco - d.totalIndicado);
-      av.push(Math.abs(dif) < 0.05 ? '✓ O total calculado confere com o da ficha do banco (' + euros(d.totalIndicado) + ').' : '⚠ O total calculado (' + euros(c.totalBanco) + ') difere ' + euros(Math.abs(dif)) + ' do indicado pelo banco: confirma os valores.');
+      var dif = r2(c.totalBancoOrig - d.totalIndicado);
+      av.push(Math.abs(dif) < 0.05 ? '✓ O total calculado (sem abatimentos) confere com o da ficha do banco (' + euros(d.totalIndicado) + ').' : '⚠ O total calculado (' + euros(c.totalBancoOrig) + ') difere ' + euros(Math.abs(dif)) + ' do indicado pelo banco: confirma os valores.');
     }
     var falta = r2((d.preco || 0) - (d.sinal || 0) - (d.entrada || 0) - (d.pedido || 0));
     if(Math.abs(falta) >= 0.01) av.push('⚠ Preço − sinal − entrada − montante pedido = ' + euros(falta) + '. Confirma se a entrada ou o montante pedido estão certos.');
@@ -356,13 +429,24 @@ th.c,td.c{text-align:right}
       var linha = document.createElement('div'); linha.className = 'reg';
       var dd = document.createElement('div'); dd.className = 'd';
       var n = document.createElement('div'); n.textContent = r.desc || CATS[r.cat] || 'Gasto';
-      var m = document.createElement('div'); m.className = 'm'; m.textContent = fmtData(r.data) + ' · ' + (CATS[r.cat] || 'Outros');
+      var extra = '';
+      if(r.kwh > 0) extra += ' · ' + r.kwh.toLocaleString('pt-PT') + ' kWh' + (r.valor > 0 ? ' (' + euros(r.valor / r.kwh) + '/kWh)' : '') + (r.local ? ' · ' + (LOCAIS[r.local] || r.local) : '');
+      if(r.odo > 0) extra += ' · ' + r.odo.toLocaleString('pt-PT') + ' km';
+      var m = document.createElement('div'); m.className = 'm'; m.textContent = fmtData(r.data) + ' · ' + (CATS[r.cat] || 'Outros') + extra;
       dd.appendChild(n); dd.appendChild(m);
       var v = document.createElement('div'); v.className = 'v'; v.textContent = euros(r.valor);
+      var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'x'; ed.textContent = '✎'; ed.title = 'Editar';
+      ed.addEventListener('click', function(){ iniciarEdicao(r); });
       var x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.title = 'Remover';
-      x.addEventListener('click', function(){ d.registos = d.registos.filter(function(y){ return y.id !== r.id; }); alterado(); });
-      linha.appendChild(dd); linha.appendChild(v); linha.appendChild(x); cont.appendChild(linha);
+      x.addEventListener('click', function(){
+        if(!confirm('Remover este gasto?')) return;
+        if(editId === r.id) limparForm();
+        d.registos = d.registos.filter(function(y){ return y.id !== r.id; }); alterado();
+      });
+      if(editId === r.id) linha.style.background = 'var(--bg)';
+      linha.appendChild(dd); linha.appendChild(v); linha.appendChild(ed); linha.appendChild(x); cont.appendChild(linha);
     });
+    renderConsumo();
 
     var cal = '';
     cal += linhaTab('Sinal de ' + euros(d.sinal), d.sinalPago ? 'pago' : 'por pagar', d.sinalPago ? 'pago' : '');
@@ -417,11 +501,11 @@ th.c,td.c{text-align:right}
     if(!c.n){ box.hidden = true; return; }
     box.hidden = false;
     var quota = function(i){ var r = c.plano[Math.min(i, c.n) - 1]; return r ? Math.round(r.j / r.p * 100) : 0; };
-    var kb = Math.min(36, c.n - 1), a0 = abater(c, 0, 1000), a1 = abater(c, kb, 1000);
+    var kb = Math.max(c.kMin, Math.min(c.kMin + 36, c.n - 1)), a0 = abater(c, c.kMin, 1000), a1 = abater(c, kb, 1000);
     var p1 = document.createElement('p');
     var b = document.createElement('b'); b.textContent = '💡 Dica: ';
     p1.appendChild(b);
-    p1.appendChild(document.createTextNode('a melhor altura para abater é o mais cedo possível. No início, uma parte grande da prestação é juros (' + quota(1) + '% na 1.ª, ' + quota(12) + '% na 12.ª, ' + quota(36) + '% na 36.ª e só ' + quota(60) + '% na 60.ª), por isso cada euro abatido cedo evita mais juros do que se esperares. Por exemplo, 1000 € abatidos logo poupam cerca de ' + euros(a0.liqA) + ' (já descontada a comissão), e os mesmos 1000 € depois da prestação ' + kb + ' poupam ' + euros(a1.liqA) + '. A comissão (0,5% do valor abatido, mais imposto do selo) é pequena comparada com os juros evitados e desce para 0,25% no último ano, mas nessa altura já quase não há juros a poupar.'));
+    p1.appendChild(document.createTextNode('a melhor altura para abater é o mais cedo possível. No início, uma parte grande da prestação é juros (' + quota(1) + '% na 1.ª, ' + quota(12) + '% na 12.ª, ' + quota(36) + '% na 36.ª e só ' + quota(60) + '% na 60.ª), por isso cada euro abatido cedo evita mais juros do que se esperares. Por exemplo, 1000 € abatidos já poupam cerca de ' + euros(a0.liqA) + ' (já descontada a comissão), e os mesmos 1000 € depois da prestação ' + kb + ' poupam ' + euros(a1.liqA) + '. A comissão (0,5% do valor abatido, mais imposto do selo) é pequena comparada com os juros evitados e desce para 0,25% no último ano, mas nessa altura já quase não há juros a poupar.'));
     var p2 = document.createElement('p');
     p2.textContent = 'Antes de abater, confirma que ficas com uma reserva para imprevistos e que esse dinheiro não rende mais do que o empréstimo custa (cerca de ' + pct(d.tan || 0) + ' ao ano, mais imposto do selo). É informação para ajudar a decidir, não aconselhamento financeiro.';
     box.appendChild(p1); box.appendChild(p2);
@@ -429,7 +513,9 @@ th.c,td.c{text-align:right}
 
   function renderAbater(c){
     renderDica(c);
-    var k = abApos === null ? c.pagas : Math.min(Math.max(0, Math.round(abApos)), Math.max(0, c.n - 1));
+    renderAbLista(c);
+    var k = abApos === null ? Math.min(Math.max(c.pagas, c.kMin), Math.max(c.kMin, c.n - 1)) : Math.min(Math.max(c.kMin, Math.round(abApos) || 0), Math.max(c.kMin, c.n - 1));
+    $('abApos').min = c.kMin;
     if(document.activeElement !== $('abApos')) $('abApos').value = k;
     if(document.activeElement !== $('abValor')) $('abValor').value = abValor > 0 ? abValor : '';
     var cont = $('abChips');
@@ -440,8 +526,10 @@ th.c,td.c{text-align:right}
         cont.appendChild(b);
       });
     }
-    if(!(abValor > 0) || !c.n){ $('tabAbater').innerHTML = '<tr><td>Escreve o valor que queres abater (ou toca num dos valores acima).</td></tr>'; $('abVeredito').hidden = true; $('abTempoBloco').hidden = true; return; }
+    if(!(abValor > 0) || !c.n){ $('tabAbater').innerHTML = '<tr><td>Escreve o valor que queres abater (ou toca num dos valores acima).</td></tr>'; $('abVeredito').hidden = true; $('abTempoBloco').hidden = true; $('abRegBloco').hidden = true; return; }
     var a = abater(c, k, abValor);
+    $('abRegBloco').hidden = !(a.X > 0);
+    if(document.activeElement !== $('abData') && !$('abData').value) $('abData').value = hojeISO();
     var h = '<tr><th></th><th class="c">Reduzir o prazo</th><th class="c">Reduzir a prestação</th></tr>';
     h += '<tr><td>Capital em dívida (depois da prestação ' + k + ')</td><td class="c" colspan="2">' + euros(a.saldo) + '</td></tr>';
     h += '<tr><td>Valor abatido</td><td class="c" colspan="2">' + euros(a.X) + (a.X < abValor ? ' (máximo possível)' : '') + '</td></tr>';
@@ -462,7 +550,7 @@ th.c,td.c{text-align:right}
     $('abVeredito').hidden = false;
 
     // o mesmo valor abatido em momentos diferentes: no início as prestações são sobretudo juros, por isso poupa-se mais
-    var ks = [0, 6, 12, 24, 36, 48, 60, 72, 80].filter(function(x){ return x < c.n; });
+    var ks = [0, 6, 12, 24, 36, 48, 60, 72, 80].filter(function(x){ return x >= c.kMin && x < c.n; });
     if(ks.indexOf(k) === -1){ ks.push(k); ks.sort(function(p, q){ return p - q; }); }
     var res = ks.map(function(x){ return { k:x, a:abater(c, x, abValor) }; });
     var maxA = Math.max.apply(null, res.map(function(r){ return r.a.liqA; }).concat([1]));
@@ -475,6 +563,79 @@ th.c,td.c{text-align:right}
     $('abTempo').innerHTML = t;
     $('abTempoTxt').textContent = 'Na 1.ª prestação, ' + euros(j1.j) + ' dos ' + euros(j1.p) + ' (' + pct(j1.j / j1.p * 100) + ') são juros; no fim quase não há juros. Por isso o mesmo abatimento poupa muito mais se for feito cedo. Poupança líquida = juros e imposto do selo evitados, menos a comissão.';
     $('abTempoBloco').hidden = false;
+  }
+
+  // Abatimentos já registados, com a poupança de cada um
+  function renderAbLista(c){
+    var abs = (d.abatimentos || []).slice().sort(function(a, b){ return (a.apos - b.apos) || ((a.data || '') < (b.data || '') ? -1 : 1); });
+    $('abListaBloco').hidden = abs.length === 0;
+    var cont = $('abLista'); cont.innerHTML = '';
+    abs.forEach(function(a){
+      var linha = document.createElement('div'); linha.className = 'reg';
+      var dd = document.createElement('div'); dd.className = 'd';
+      var n = document.createElement('div'); n.textContent = euros(a.valor) + ' · ' + (a.modo === 'prestacao' ? 'reduzir a prestação' : 'reduzir o prazo');
+      var m = document.createElement('div'); m.className = 'm';
+      m.textContent = 'Depois da prestação ' + a.apos + (a.data ? ' · ' + fmtData(a.data) : '') + ' · poupança líquida ' + euros(c.poupAb[a.id]);
+      dd.appendChild(n); dd.appendChild(m);
+      var x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.title = 'Anular este abatimento';
+      x.addEventListener('click', function(){
+        if(!confirm('Anular este abatimento? O capital em dívida e os juros voltam a contar sem ele.')) return;
+        d.abatimentos = d.abatimentos.filter(function(y){ return y.id !== a.id; }); alterado();
+      });
+      linha.appendChild(dd); linha.appendChild(x); cont.appendChild(linha);
+    });
+    if(abs.length){
+      var t = document.createElement('div'); t.className = 'aviso';
+      t.textContent = 'No total já abataste ' + euros(c.abatido) + ' ao capital e poupas cerca de ' + euros(c.poupanca) + ' em juros e imposto do selo (já descontadas as comissões de ' + euros(c.comissoes) + '). Capital em dívida agora: ' + euros(saldoApos(c, c.kMin)) + '.';
+      cont.appendChild(t);
+    }
+  }
+
+  // Consumo real a partir dos carregamentos (kWh, local, quilómetros)
+  function renderConsumo(){
+    var en = (d.registos || []).filter(function(r){ return r.cat === 'energia' && r.kwh > 0; });
+    if(!en.length){ $('tabConsumo').innerHTML = '<tr><td>Ainda não registaste carregamentos com kWh.</td></tr>'; return; }
+    var kwh = 0, eur = 0, loc = {};
+    en.forEach(function(r){
+      kwh += r.kwh; eur += r.valor;
+      var l = loc[r.local || 'outro'] = loc[r.local || 'outro'] || { kwh:0, eur:0 };
+      l.kwh += r.kwh; l.eur += r.valor;
+    });
+    var t = linhaTab('Carregamentos registados', String(en.length));
+    t += linhaTab('Total carregado', kwh.toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh · ' + euros(eur));
+    t += linhaTab('Preço médio', euros(eur / kwh) + '/kWh');
+    Object.keys(loc).forEach(function(k){
+      t += linhaTab('&nbsp;&nbsp;' + (LOCAIS[k] || k), loc[k].kwh.toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh · ' + euros(loc[k].eur) + ' · ' + euros(loc[k].eur / loc[k].kwh) + '/kWh');
+    });
+    // o 1.º carregamento com quilómetros só marca o ponto de partida; os seguintes repõem a energia gasta desde o anterior
+    var oc = en.filter(function(r){ return r.odo > 0; }).sort(function(a, b){ return a.odo - b.odo; });
+    if(oc.length >= 2 && oc[oc.length - 1].odo > oc[0].odo){
+      var km = oc[oc.length - 1].odo - oc[0].odo, k2 = 0, e2 = 0;
+      oc.slice(1).forEach(function(r){ k2 += r.kwh; e2 += r.valor; });
+      t += linhaTab('Quilómetros entre o 1.º e o último registo', km.toLocaleString('pt-PT') + ' km');
+      t += linhaTab('<b>Consumo real</b>', '<b>' + (k2 / km * 100).toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh/100 km</b>');
+      t += linhaTab('<b>Custo de energia</b>', '<b>' + euros(e2 / km * 100) + '/100 km · ' + euros(e2 / km) + '/km</b>');
+    } else {
+      t += '<tr><td colspan="2" class="nota">Regista os quilómetros do carro em pelo menos dois carregamentos para ver o consumo aos 100 km.</td></tr>';
+    }
+    $('tabConsumo').innerHTML = t;
+  }
+
+  // Formulário de gastos: adicionar ou editar
+  function limparForm(){
+    editId = null;
+    $('rValor').value = ''; $('rDesc').value = ''; $('rKwh').value = ''; $('rOdo').value = ''; $('rData').value = hojeISO();
+    $('rAdd').textContent = 'Adicionar gasto'; $('rCancel').hidden = true;
+    mostrarEnergia();
+  }
+  function mostrarEnergia(){ $('rEnergia').hidden = $('rCat').value !== 'energia'; }
+  function iniciarEdicao(r){
+    editId = r.id;
+    $('rCat').value = CATS[r.cat] ? r.cat : 'outros'; $('rData').value = r.data || hojeISO(); $('rDesc').value = r.desc || '';
+    $('rValor').value = r.valor; $('rKwh').value = r.kwh > 0 ? r.kwh : ''; $('rLocal').value = r.local || 'casa'; $('rOdo').value = r.odo > 0 ? r.odo : '';
+    $('rAdd').textContent = 'Guardar alterações'; $('rCancel').hidden = false;
+    mostrarEnergia(); render();
+    $('rCat').scrollIntoView({ behavior:'smooth', block:'center' });
   }
 
   function render(){
@@ -572,8 +733,27 @@ th.c,td.c{text-align:right}
     var v = parseFloat($('rValor').value);
     if(!(v > 0)){ $('rValor').focus(); return; }
     d.registos = d.registos || [];
-    d.registos.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), cat: $('rCat').value, desc: $('rDesc').value.trim(), valor: v, data: $('rData').value || hojeISO() });
-    $('rValor').value = ''; $('rDesc').value = '';
+    var reg = { id: editId || 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), cat: $('rCat').value, desc: $('rDesc').value.trim(), valor: v, data: $('rData').value || hojeISO() };
+    var kwh = parseFloat($('rKwh').value), odo = parseFloat($('rOdo').value);
+    if(reg.cat === 'energia'){
+      if(kwh > 0){ reg.kwh = kwh; reg.local = $('rLocal').value; }
+      if(odo > 0) reg.odo = Math.round(odo);
+    }
+    var i = editId ? d.registos.findIndex(function(y){ return y.id === editId; }) : -1;
+    if(i >= 0) d.registos[i] = reg; else d.registos.push(reg);
+    limparForm();
+    alterado();
+  });
+  $('rCancel').addEventListener('click', function(){ limparForm(); render(); });
+  $('rCat').addEventListener('change', mostrarEnergia);
+  $('abRegistar').addEventListener('click', function(){
+    var c = calcular(), k = abApos === null ? Math.min(Math.max(c.pagas, c.kMin), Math.max(c.kMin, c.n - 1)) : Math.min(Math.max(c.kMin, Math.round(abApos) || 0), Math.max(c.kMin, c.n - 1));
+    var a = abater(c, k, abValor);
+    if(!(a.X > 0)) return;
+    if(!confirm('Registar o abatimento de ' + euros(a.X) + ' depois da prestação ' + k + '? A comissão estimada é ' + euros(a.custoCom) + '.')) return;
+    d.abatimentos = d.abatimentos || [];
+    d.abatimentos.push({ id: 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), apos: k, valor: a.X, modo: $('abModo').value, data: $('abData').value || hojeISO() });
+    abValor = 0; abApos = null; $('abData').value = '';
     alterado();
   });
   window.addEventListener('pagehide', function(){
