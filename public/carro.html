@@ -8,7 +8,7 @@
 <title>Carro elétrico — Custos Mensais</title>
 <style>
 :root{
-  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#8a8070;
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#706757;
   --accent:#b5572e; --accent-fg:#ffffff; --ok:#5b7a63; --erro:#b5372e;
   --radius:12px; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
@@ -162,6 +162,8 @@ th.c,td.c{text-align:right}
   <h2>Consumo real</h2>
   <p>Calculado a partir dos carregamentos que registas acima (com kWh). Para veres o consumo aos 100 km, regista os quilómetros do carro em pelo menos dois carregamentos.</p>
   <table id="tabConsumo"></table>
+  <div id="grafConsumo"></div>
+  <div id="grafPreco"></div>
 </section>
 
 <section class="card">
@@ -591,10 +593,61 @@ th.c,td.c{text-align:right}
     }
   }
 
+  // Gráfico de linha simples: pontos = [{ y, forma:'c'|'q', cor, dica }], ordem do tempo da esquerda para a direita
+  function graficoLinha(pontos, unidade, aria){
+    var W = 340, H = 150, pl = 34, pr = 8, pt = 14, pb = 18;
+    var ys = pontos.map(function(p){ return p.y; });
+    var min = Math.min.apply(null, ys), max = Math.max.apply(null, ys);
+    if(max === min){ max += 1; min = Math.max(0, min - 1); }
+    var folga = (max - min) * 0.1; max += folga; min = Math.max(0, min - folga);
+    function X(i){ return pontos.length === 1 ? (pl + W - pr) / 2 : pl + i * (W - pl - pr) / (pontos.length - 1); }
+    function Y(v){ return pt + (H - pt - pb) * (1 - (v - min) / (max - min)); }
+    var s = '<svg class="graf" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + aria + '">';
+    [min, (min + max) / 2, max].forEach(function(v){
+      s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" style="stroke:var(--border);stroke-width:1"/>' +
+        '<text x="' + (pl - 4) + '" y="' + (Y(v) + 3).toFixed(1) + '" style="fill:var(--muted);font-size:9px;text-anchor:end">' + v.toLocaleString('pt-PT', { maximumFractionDigits:2 }) + '</text>';
+    });
+    if(pontos.length > 1) s += '<polyline fill="none" style="stroke:var(--muted);stroke-width:1.2;opacity:.6" points="' + pontos.map(function(p, i){ return X(i).toFixed(1) + ',' + Y(p.y).toFixed(1); }).join(' ') + '"/>';
+    pontos.forEach(function(p, i){
+      var x = X(i), y = Y(p.y), t = '<title>' + p.dica + '</title>';
+      s += p.forma === 'q'
+        ? '<rect x="' + (x - 4).toFixed(1) + '" y="' + (y - 4).toFixed(1) + '" width="8" height="8" style="fill:' + p.cor + '">' + t + '</rect>'
+        : '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4.5" style="fill:' + p.cor + '">' + t + '</circle>';
+    });
+    s += '<text x="' + pl + '" y="' + (H - 4) + '" style="fill:var(--muted);font-size:9px">' + pontos[0].rot + '</text>';
+    s += '<text x="' + (W - pr) + '" y="' + (H - 4) + '" style="fill:var(--muted);font-size:9px;text-anchor:end">' + pontos[pontos.length - 1].rot + '</text>';
+    s += '<text x="' + pl + '" y="9" style="fill:var(--muted);font-size:9px">' + unidade + '</text></svg>';
+    return s;
+  }
+  function renderGraficosConsumo(en){
+    var porData = en.slice().sort(function(a, b){ return (a.data || '') < (b.data || '') ? -1 : (a.data || '') > (b.data || '') ? 1 : 0; });
+    var cores = { casa:'var(--ok)', publico:'var(--accent)', trabalho:'var(--fg)', outro:'var(--muted)' };
+    var formas = { casa:'c', publico:'q', trabalho:'c', outro:'q' };
+    // consumo aos 100 km: cada carregamento repõe a energia gasta desde o anterior com quilómetros
+    var oc = porData.filter(function(r){ return r.odo > 0; }).sort(function(a, b){ return a.odo - b.odo; }), seg = [];
+    for(var i = 1; i < oc.length; i++){
+      var km = oc[i].odo - oc[i - 1].odo;
+      if(km > 0) seg.push({ y: oc[i].kwh / km * 100, forma:'c', cor:'var(--accent)', rot: fmtData(oc[i].data).slice(0, 5), dica: fmtData(oc[i].data) + ': ' + (oc[i].kwh / km * 100).toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh/100 km (' + km.toLocaleString('pt-PT') + ' km)' });
+    }
+    $('grafConsumo').innerHTML = seg.length
+      ? '<h2 style="font-size:.98rem;margin:18px 0 0">Consumo ao longo do tempo</h2>' + graficoLinha(seg, 'kWh/100 km', 'Consumo em kWh aos 100 km por carregamento')
+      : '';
+    var preco = porData.filter(function(r){ return r.valor > 0; }).map(function(r){
+      var l = r.local || 'outro';
+      return { y: r.valor / r.kwh, forma: formas[l] || 'q', cor: cores[l] || 'var(--muted)', rot: fmtData(r.data).slice(0, 5), dica: fmtData(r.data) + ' · ' + (LOCAIS[l] || l) + ': ' + euros(r.valor / r.kwh) + '/kWh' };
+    });
+    $('grafPreco').innerHTML = preco.length
+      ? '<h2 style="font-size:.98rem;margin:18px 0 0">Preço por kWh (casa vs. posto público)</h2>' + graficoLinha(preco, '€/kWh', 'Preço por kWh de cada carregamento') +
+        '<div class="legenda"><span><b style="background:var(--ok);border-radius:50%"></b>Casa</span><span><b style="background:var(--accent)"></b>Posto público</span><span><b style="background:var(--fg);border-radius:50%"></b>Trabalho</span><span><b style="background:var(--muted)"></b>Outro</span></div>'
+      : '';
+  }
+
   // Consumo real a partir dos carregamentos (kWh, local, quilómetros)
   function renderConsumo(){
     var en = (d.registos || []).filter(function(r){ return r.cat === 'energia' && r.kwh > 0; });
+    $('grafConsumo').innerHTML = ''; $('grafPreco').innerHTML = '';
     if(!en.length){ $('tabConsumo').innerHTML = '<tr><td>Ainda não registaste carregamentos com kWh.</td></tr>'; return; }
+    renderGraficosConsumo(en);
     var kwh = 0, eur = 0, loc = {};
     en.forEach(function(r){
       kwh += r.kwh; eur += r.valor;

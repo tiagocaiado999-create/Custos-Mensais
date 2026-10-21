@@ -1,8 +1,21 @@
 // Service worker: a app abre mesmo sem rede (usa a última versão guardada).
 // Os dados (/api/) nunca são guardados aqui: vêm sempre do servidor.
-const VERSAO = 'custos-v1';
+// Mudar VERSAO sempre que a lista PRE_CACHE mudar, para limpar a cache antiga.
+const VERSAO = 'custos-v2';
+const PRE_CACHE = [
+  '/', '/style.css', '/app.js', '/manifest.webmanifest',
+  '/vendor/jsQR.js', '/vendor/xlsx.full.min.js',
+  '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png'
+];
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', (e) => {
+  // cada ficheiro é guardado à parte: se um falhar, os outros ficam na mesma
+  e.waitUntil(
+    caches.open(VERSAO)
+      .then((c) => Promise.all(PRE_CACHE.map((u) => c.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
+});
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
