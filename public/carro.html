@@ -594,18 +594,22 @@ th.c,td.c{text-align:right}
   }
 
   // Gráfico de linha simples: pontos = [{ y, forma:'c'|'q', cor, dica }], ordem do tempo da esquerda para a direita
-  function graficoLinha(pontos, unidade, aria){
-    var W = 340, H = 150, pl = 34, pr = 8, pt = 14, pb = 18;
+  function graficoLinha(pontos, unidade, aria, esc){
+    var W = 340, H = esc ? 200 : 150, pl = 34, pr = 8, pt = 14, pb = 18;
     var ys = pontos.map(function(p){ return p.y; });
     var min = Math.min.apply(null, ys), max = Math.max.apply(null, ys);
-    if(max === min){ max += 1; min = Math.max(0, min - 1); }
-    var folga = (max - min) * 0.1; max += folga; min = Math.max(0, min - folga);
+    if(esc){ min = esc.min; max = Math.max(esc.max, Math.ceil(max / esc.passo) * esc.passo); }
+    else if(max === min){ max += 1; min = Math.max(0, min - 1); }
+    if(!esc){ var folga = (max - min) * 0.1; max += folga; min = Math.max(0, min - folga); }
+    var marcas = [];
+    if(esc){ for(var v = min + esc.passo; v <= max + 1e-9; v += esc.passo) marcas.push(Math.round(v * 1000) / 1000); marcas.unshift(min); }
+    else marcas = [min, (min + max) / 2, max];
     function X(i){ return pontos.length === 1 ? (pl + W - pr) / 2 : pl + i * (W - pl - pr) / (pontos.length - 1); }
     function Y(v){ return pt + (H - pt - pb) * (1 - (v - min) / (max - min)); }
     var s = '<svg class="graf" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + aria + '">';
-    [min, (min + max) / 2, max].forEach(function(v){
+    marcas.forEach(function(v){
       s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" style="stroke:var(--border);stroke-width:1"/>' +
-        '<text x="' + (pl - 4) + '" y="' + (Y(v) + 3).toFixed(1) + '" style="fill:var(--muted);font-size:9px;text-anchor:end">' + v.toLocaleString('pt-PT', { maximumFractionDigits:2 }) + '</text>';
+        '<text x="' + (pl - 4) + '" y="' + (Y(v) + 3).toFixed(1) + '" style="fill:var(--muted);font-size:9px;text-anchor:end">' + v.toLocaleString('pt-PT', { minimumFractionDigits: esc ? 2 : 0, maximumFractionDigits:2 }) + '</text>';
     });
     if(pontos.length > 1) s += '<polyline fill="none" style="stroke:var(--muted);stroke-width:1.2;opacity:.6" points="' + pontos.map(function(p, i){ return X(i).toFixed(1) + ',' + Y(p.y).toFixed(1); }).join(' ') + '"/>';
     pontos.forEach(function(p, i){
@@ -637,7 +641,7 @@ th.c,td.c{text-align:right}
       return { y: r.valor / r.kwh, forma: formas[l] || 'q', cor: cores[l] || 'var(--muted)', rot: fmtData(r.data).slice(0, 5), dica: fmtData(r.data) + ' · ' + (LOCAIS[l] || l) + ': ' + euros(r.valor / r.kwh) + '/kWh' };
     });
     $('grafPreco').innerHTML = preco.length
-      ? '<h2 style="font-size:.98rem;margin:18px 0 0">Preço por kWh (casa vs. posto público)</h2>' + graficoLinha(preco, '€/kWh', 'Preço por kWh de cada carregamento') +
+      ? '<h2 style="font-size:.98rem;margin:18px 0 0">Preço por kWh (casa vs. posto público)</h2>' + graficoLinha(preco, '€/kWh', 'Preço por kWh de cada carregamento', { min:0, max:0.5, passo:0.05 }) +
         '<div class="legenda"><span><b style="background:var(--ok);border-radius:50%"></b>Casa</span><span><b style="background:var(--accent)"></b>Posto público</span><span><b style="background:var(--fg);border-radius:50%"></b>Trabalho</span><span><b style="background:var(--muted)"></b>Outro</span></div>'
       : '';
   }
