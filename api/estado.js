@@ -22,7 +22,10 @@ async function somarBytes(redis, chaves) {
   return total;
 }
 
+const { exigirSessao } = require('./_sessao');
+
 module.exports = async function handler(req, res) {
+  if (!exigirSessao(req, res)) return;
   try {
     if (req.method !== 'GET') { res.status(405).json({ erro: 'Método não permitido' }); return; }
     res.setHeader('Cache-Control', 'no-store');

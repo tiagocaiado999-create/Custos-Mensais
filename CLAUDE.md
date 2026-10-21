@@ -32,11 +32,12 @@ Os ficheiros são grandes. Não leias um ficheiro inteiro para mexer numa funç�
   12. `resumo.js`: resumo do mês em frases.
   13. `backups.js`: cópias de segurança (restaurar versões).
   14. `main.js`: abas, navegação de mês, `renderTudo`, registo do service worker, arranque.
-- `carro.html`: simulador do carro (HTML, CSS e JS na mesma página). **Página escondida**: de propósito não tem ligação a partir da app.
+- `carro.html` + `carro.css` + `carro.js`: simulador do carro. **Página escondida**: de propósito não tem ligação a partir da app.
 - `gestao.html`: cópia completa, envio por email, estado do armazenamento. Também **escondida** de propósito.
+- `login.html` + `auth.js`: página de entrada e o aviso que leva para ela quando a API responde 401 (carregado por todas as páginas).
 - `sw.js`: service worker (rede primeiro, cache offline). `vendor/`: `jsQR`, `xlsx`.
 
-`api/` (funções serverless): `data.js` (dados principais), `carro.js`, `faturas.js`, `backups.js`, `estado.js`, `preco.js`, `copia-email.js` (cron semanal, `vercel.json`).
+`api/` (funções serverless): `data.js` (dados principais), `carro.js`, `faturas.js`, `backups.js`, `estado.js`, `preco.js`, `copia-email.js` (cron semanal, `vercel.json`), `login.js` (entrar/sair) e `_sessao.js` (verificação da palavra-passe; o `_` impede que seja uma rota).
 
 ## Regras que não podes quebrar
 
@@ -53,3 +54,12 @@ Não há testes automáticos nem Node instalado nesta máquina. O que funcionou:
 ## Ambiente
 
 Windows, PowerShell. Atenção: um deploy pendente na Vercel faz parecer que a alteração "não funcionou" (ver o estado do último commit no GitHub).
+
+## Palavra-passe do site
+
+- Uma única palavra-passe, na variável de ambiente **`SENHA`** da Vercel. **Nunca no código nem no repositório** (o repositório é público). Mudar a `SENHA` termina todas as sessões.
+- Sem `SENHA` definida o site fica aberto (de propósito, para nunca ficar trancado fora por engano).
+- Toda a função em `api/` começa com `exigirSessao(req, res)` (de `_sessao.js`). Uma função nova **tem de ter esta linha**. Exceção: o `GET` de `copia-email.js` (cron) usa `CRON_SECRET`.
+- Sessão = cookie `cm_sessao` (30 dias, HttpOnly). Máximo de 5 tentativas falhadas por IP em 15 minutos (`login.js`, guardado no Redis).
+- As páginas HTML e os `js/` são públicos (não têm dados); o que está protegido são os dados, via API.
+- Testar a lógica da API: o VS Code traz um Node (`ELECTRON_RUN_AS_NODE=1 "…/Microsoft VS Code/Code.exe" ficheiro.js`), com um `ioredis` falso em memória.

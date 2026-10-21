@@ -77,7 +77,10 @@ async function enviar(redis) {
   return { bytes: Buffer.byteLength(texto), semFotos, faturas: copia.faturas.length };
 }
 
+const { exigirSessao } = require('./_sessao');
+
 module.exports = async function handler(req, res) {
+  if (req.method === 'POST' && !exigirSessao(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   let redis;
   try {

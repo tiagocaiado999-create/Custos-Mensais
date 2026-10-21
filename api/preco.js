@@ -1,4 +1,7 @@
+const { exigirSessao } = require('./_sessao');
+
 module.exports = async function handler(req, res) {
+  if (!exigirSessao(req, res)) return;
   try {
     var symbol = (req.query.symbol || '').toUpperCase().trim();
     if (!symbol) {

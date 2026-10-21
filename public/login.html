@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b5572e">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icons/icon-192.png">
+<title>Entrar — Custos Mensais</title>
+<style>
+:root{
+  --bg:#f6f4f0; --surface:#ffffff; --border:#e3ddd3; --fg:#2b2620; --muted:#706757;
+  --accent:#b5572e; --accent-fg:#ffffff; --erro:#b5372e; --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1c1a17; --surface:#242120; --border:#3a342c; --fg:#ece6dc; --muted:#978d7c;
+    --accent:#e08358; --accent-fg:#1c1a17; --erro:#e08358; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px 16px}
+.cartao{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;width:100%;max-width:360px}
+h1{font-family:Georgia,serif;font-size:1.4rem;margin:0 0 4px}
+p{margin:0 0 16px;color:var(--muted);font-size:.9rem}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px}
+input{width:100%;min-height:44px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:16px}
+button{width:100%;min-height:44px;margin-top:14px;border:none;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-size:1rem;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.erro{color:var(--erro);font-size:.85rem;min-height:1.3em;margin-top:10px}
+</style>
+</head>
+<body>
+<form class="cartao" id="form">
+  <h1>Custos Mensais</h1>
+  <p>Escreve a palavra-passe para entrar.</p>
+  <label for="senha">Palavra-passe</label>
+  <input type="password" id="senha" autocomplete="current-password" autofocus required>
+  <button type="submit" id="entrar">Entrar</button>
+  <div class="erro" id="erro" role="alert"></div>
+</form>
+<script>
+(function(){
+  function destino(){
+    var v = new URLSearchParams(location.search).get('volta') || '/';
+    return (v.charAt(0) === '/' && v.charAt(1) !== '/' && v.indexOf('\') === -1) ? v : '/';
+  }
+  var form = document.getElementById('form'), erro = document.getElementById('erro'), btn = document.getElementById('entrar');
+  fetch('/api/login', { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    if(j && (j.autenticado || !j.ativa)) location.replace(destino());
+  }).catch(function(){});
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    erro.textContent = ''; btn.disabled = true;
+    fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ senha: document.getElementById('senha').value }) })
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){
+        if(x.ok){ location.replace(destino()); return; }
+        erro.textContent = x.j.erro || 'Não foi possível entrar.';
+        btn.disabled = false;
+        document.getElementById('senha').select();
+      })
+      .catch(function(){ erro.textContent = 'Sem ligação. Tenta outra vez.'; btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

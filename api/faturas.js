@@ -17,7 +17,10 @@ function getCliente() {
 
 const idValido = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{4,48}$/.test(id);
 
+const { exigirSessao } = require('./_sessao');
+
 module.exports = async function handler(req, res) {
+  if (!exigirSessao(req, res)) return;
   try {
     const redis = getCliente();
     const q = req.query || {};

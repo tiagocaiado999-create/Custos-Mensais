@@ -57,7 +57,10 @@ function resumir(d) {
   return r;
 }
 
+const { exigirSessao } = require('./_sessao');
+
 module.exports = async function handler(req, res) {
+  if (!exigirSessao(req, res)) return;
   try {
     const redis = getCliente();
     res.setHeader('Cache-Control', 'no-store');
