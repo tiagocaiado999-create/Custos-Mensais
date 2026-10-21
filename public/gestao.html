@@ -59,6 +59,13 @@ td:last-child{text-align:right;font-variant-numeric:tabular-nums}
   <div class="aviso" id="avisoCopia" role="status">A verificar a última cópia…</div>
   <button id="btnCopia" type="button">Descarregar cópia completa</button>
   <div class="msg" id="progCopia" role="status"></div>
+  <hr>
+  <h3>Cópia por email</h3>
+  <p>O site envia sozinho uma cópia completa por email todas as segundas-feiras.</p>
+  <div class="aviso" id="avisoEnvio" role="status">—</div>
+  <button id="btnEnvio" type="button" class="sec">Enviar por email agora</button>
+  <div class="msg" id="resEnvio" role="status"></div>
+  <hr>
   <div class="auto">
     <label><input type="checkbox" id="autoCopia"> Descarregar a cópia automaticamente ao abrir esta página, se tiverem passado mais de</label>
     <select id="autoDias"><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option></select>
@@ -110,6 +117,26 @@ td:last-child{text-align:right;font-variant-numeric:tabular-nums}
     if(dias > lim){ el.className = 'aviso alerta'; el.textContent = txt + ' Já passou o prazo de ' + lim + ' dias: descarrega uma cópia nova.'; }
     else { el.className = 'aviso ok'; el.textContent = txt; }
   }
+  function mostrarEnvio(o){
+    var el = $('avisoEnvio');
+    if(!o){ el.className = 'aviso'; el.textContent = 'Ainda não foi enviada nenhuma cópia por email (o primeiro envio automático é na próxima segunda-feira).'; return; }
+    var quando = new Date(o.quando).toLocaleString('pt-PT');
+    if(o.ok){ el.className = 'aviso ok'; el.textContent = 'Último envio: ' + quando + ' (' + fmt(o.bytes) + ', ' + o.faturas + (o.faturas === 1 ? ' fatura' : ' faturas') + (o.semFotos ? ', SEM as fotos: não couberam no email' : '') + ').'; if(o.semFotos) el.className = 'aviso alerta'; }
+    else { el.className = 'aviso alerta'; el.textContent = 'O último envio (' + quando + ') falhou: ' + o.erro; }
+  }
+  async function enviarEmail(){
+    var btn = $('btnEnvio'), res = $('resEnvio');
+    btn.disabled = true; msg(res, 'A enviar…');
+    try{
+      var r = await fetch('/api/copia-email', { method:'POST' }), j = {};
+      try{ j = await r.json(); }catch(e){}
+      if(!r.ok) throw new Error(j.erro || ('HTTP ' + r.status));
+      msg(res, 'Cópia enviada por email.', 'ok');
+    }catch(e){ msg(res, 'Falhou: ' + (e.message || e), 'erro'); }
+    btn.disabled = false;
+    carregarEstado();
+  }
+  $('btnEnvio').addEventListener('click', enviarEmail);
   async function descarregar(auto){
     var btn = $('btnCopia'), prog = $('progCopia');
     btn.disabled = true;
@@ -234,7 +261,7 @@ td:last-child{text-align:right;font-variant-numeric:tabular-nums}
       var r = await fetch('/api/estado', { cache:'no-store' });
       if(!r.ok) throw new Error('HTTP ' + r.status);
       var j = await r.json(), rd = j.redis, ap = j.app, h = '<table>';
-      ultimaCopia = ap.ultimaCopia || null; mostrarAvisoCopia();
+      ultimaCopia = ap.ultimaCopia || null; mostrarAvisoCopia(); mostrarEnvio(ap.ultimoEnvio);
       var total = ap.dadosBytes + ap.imagensBytes + ap.backupsBytes;
       var usado = rd.memoriaUsada !== null ? rd.memoriaUsada : total;
       if(rd.memoriaUsada !== null) h += linha('Memória usada no Redis', fmt(rd.memoriaUsada));

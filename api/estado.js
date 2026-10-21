@@ -42,14 +42,17 @@ module.exports = async function handler(req, res) {
     const nossas = await redis.keys('custos-mensais*');
     const imgs = nossas.filter((k) => k.startsWith('custos-mensais-fatura-img:'));
     const backups = nossas.filter((k) => k.startsWith(CHAVE + '-backup'));
-    const [dadosBytes, imagensBytes, backupsBytes, versao, nFaturas, ultimaCopia] = await Promise.all([
+    const [dadosBytes, imagensBytes, backupsBytes, versao, nFaturas, ultimaCopia, ultimoEnvio] = await Promise.all([
       redis.strlen(CHAVE).catch(() => 0),
       somarBytes(redis, imgs),
       somarBytes(redis, backups),
       redis.get('custos-mensais-versao'),
       redis.hlen('custos-mensais-faturas').catch(() => 0),
-      redis.get('custos-mensais-ultima-copia').catch(() => null)
+      redis.get('custos-mensais-ultima-copia').catch(() => null),
+      redis.get('custos-mensais-ultimo-envio').catch(() => null)
     ]);
+    let envio = null;
+    try { envio = ultimoEnvio ? JSON.parse(ultimoEnvio) : null; } catch (e) {}
     const num = (v) => (v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v));
 
     res.status(200).json({
@@ -65,6 +68,7 @@ module.exports = async function handler(req, res) {
       app: {
         versaoDados: parseInt(versao || '0', 10) || 0,
         ultimaCopia: ultimaCopia || null,
+        ultimoEnvio: envio,
         dadosBytes: Number(dadosBytes) || 0,
         faturas: Number(nFaturas) || 0,
         imagens: imgs.length,
