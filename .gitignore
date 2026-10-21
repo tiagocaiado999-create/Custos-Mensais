@@ -1,0 +1,17 @@
+# Segredos: o repositório é público, nunca ficam no git (vivem nas variáveis de ambiente da Vercel)
+.env
+.env.*
+!.env.example
+
+# Vercel CLI (criada por `vercel link` / `vercel env pull`)
+.vercel
+
+# Dependências e lixo local
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# Cópias completas descarregadas da página de gestão (têm os dados pessoais todos)
+custos-mensais-*.json
+privado/

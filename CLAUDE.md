@@ -63,3 +63,9 @@ Windows, PowerShell. Atenção: um deploy pendente na Vercel faz parecer que a a
 - Sessão = cookie `cm_sessao` (30 dias, HttpOnly). Máximo de 5 tentativas falhadas por IP em 15 minutos (`login.js`, guardado no Redis).
 - As páginas HTML e os `js/` são públicos (não têm dados); o que está protegido são os dados, via API.
 - Testar a lógica da API: o VS Code traz um Node (`ELECTRON_RUN_AS_NODE=1 "…/Microsoft VS Code/Code.exe" ficheiro.js`), com um `ioredis` falso em memória.
+
+## Variáveis de ambiente e segredos
+
+- Vivem **só na Vercel** (Settings → Environment Variables, Production): `CustoMensal_REDIS_URL`, `SENHA`, `CRON_SECRET`, `RESEND_API_KEY`, `EMAIL_COPIA`. Não há `.env.local`: o projeto não tem servidor local, testa-se como descrito acima.
+- O `.gitignore` bloqueia `.env*`, `.vercel/` e as cópias de dados descarregadas. Se algum dia fizeres `vercel env pull`, o `.env.local` aponta para o Redis **real**: nunca o uses para testes que escrevam dados.
+- Variáveis secretas da Vercel não se leem de volta; para mudar uma, edita-se o valor e faz-se novo deploy.
