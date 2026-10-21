@@ -1,9 +1,10 @@
 // Service worker: a app abre mesmo sem rede (usa a última versão guardada).
 // Os dados (/api/) nunca são guardados aqui: vêm sempre do servidor.
 // Mudar VERSAO sempre que a lista PRE_CACHE mudar, para limpar a cache antiga.
-const VERSAO = 'custos-v2';
+const VERSAO = 'custos-v3';
 const PRE_CACHE = [
-  '/', '/style.css', '/app.js', '/manifest.webmanifest',
+  '/', '/style.css', '/manifest.webmanifest',
+  '/js/nucleo.js', '/js/sincronizacao.js', '/js/extrato.js', '/js/investimentos.js', '/js/categorias-pesquisa.js', '/js/exportar.js', '/js/adicionar.js', '/js/qr.js', '/js/listas-mes.js', '/js/faturas.js', '/js/painel-mais.js', '/js/resumo.js', '/js/backups.js', '/js/main.js', 
   '/vendor/jsQR.js', '/vendor/xlsx.full.min.js',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png'
 ];
