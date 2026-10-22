@@ -64,7 +64,7 @@ Windows, PowerShell. Atenção: um deploy pendente na Vercel faz parecer que a a
 - Toda a função em `api/` começa com `exigirSessao(req, res)` (de `_sessao.js`). Uma função nova **tem de ter esta linha**. Exceção: o `GET` de `copia-email.js` (cron) usa `CRON_SECRET`.
 - Sessão = cookie `cm_sessao` (30 dias, HttpOnly). Máximo de 5 tentativas falhadas por IP em 15 minutos (`login.js`, guardado no Redis).
 - A palavra-passe `TC2026` é curta **por decisão do Tiago** (só ele e a Cláudia a sabem): não voltar a sugerir trocá-la.
-- `vercel.json` define os cabeçalhos de segurança (CSP, `X-Frame-Options`, etc.). Um recurso externo novo (script, fonte, imagem) tem de ser acrescentado à CSP, senão o navegador bloqueia-o.
+- `vercel.json` define os cabeçalhos de segurança (CSP, `X-Frame-Options`, etc.). Um recurso externo novo (script, fonte, imagem) tem de ser acrescentado à CSP, senão o navegador bloqueia-o. O service worker faz `fetch` dos recursos externos, por isso o `connect-src` também os tem de listar (sem isso as fontes do Google deixam de carregar quando o service worker está ativo).
 - As páginas HTML e os `js/` são públicos (não têm dados); o que está protegido são os dados, via API.
 - Testar a lógica da API: ver "Como verificar alterações".
 
