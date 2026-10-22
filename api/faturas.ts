@@ -1,34 +1,26 @@
-const Redis = require('ioredis');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type Redis from 'ioredis';
+import { getCliente } from './_redis';
+import { exigirSessao } from './_sessao';
+import { msg, um } from './_util';
 
 // Faturas guardadas (para garantias): metadados num hash + imagem (JPEG em base64) numa chave por fatura.
 const INDICE = 'custos-mensais-faturas';
 const IMG = 'custos-mensais-fatura-img:';
 const MAX_IMAGEM = 1500000; // ~1,5 MB de base64 (as fotos são reduzidas no telemóvel)
-let cliente;
+const idValido = (id: unknown): id is string => typeof id === 'string' && /^[A-Za-z0-9_-]{4,48}$/.test(id);
 
-function getCliente() {
-  if (!cliente) {
-    const url = process.env.CustoMensal_REDIS_URL || process.env.REDIS_URL;
-    if (!url) throw new Error('Variável de ligação ao Redis não encontrada');
-    cliente = new Redis(url);
-  }
-  return cliente;
-}
-
-const idValido = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{4,48}$/.test(id);
-
-const { exigirSessao } = require('./_sessao');
-
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!exigirSessao(req, res)) return;
   try {
     const redis = getCliente();
     const q = req.query || {};
+    const idq = um(q.id);
 
     if (req.method === 'GET') {
-      if (q.id) {
-        if (!idValido(q.id)) { res.status(400).json({ erro: 'Id inválido' }); return; }
-        const b64 = await redis.get(IMG + q.id);
+      if (idq) {
+        if (!idValido(idq)) { res.status(400).json({ erro: 'Id inválido' }); return; }
+        const b64 = await redis.get(IMG + idq);
         if (!b64) { res.status(404).json({ erro: 'Sem imagem' }); return; }
         res.setHeader('Content-Type', 'image/jpeg');
         res.setHeader('Cache-Control', 'private, max-age=86400');
@@ -67,15 +59,15 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      if (!idValido(q.id)) { res.status(400).json({ erro: 'Id inválido' }); return; }
-      await redis.hdel(INDICE, q.id);
-      await redis.del(IMG + q.id);
+      if (!idValido(idq)) { res.status(400).json({ erro: 'Id inválido' }); return; }
+      await redis.hdel(INDICE, idq);
+      await redis.del(IMG + idq);
       res.status(200).json({ ok: true });
       return;
     }
 
     res.status(405).json({ erro: 'Método não permitido' });
   } catch (e) {
-    res.status(500).json({ erro: String(e.message || e) });
+    res.status(500).json({ erro: msg(e) });
   }
-};
+}

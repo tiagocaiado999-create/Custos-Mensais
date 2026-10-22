@@ -1,9 +1,11 @@
-const { exigirSessao } = require('./_sessao');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { exigirSessao } from './_sessao';
+import { msg, um } from './_util';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!exigirSessao(req, res)) return;
   try {
-    var symbol = (req.query.symbol || '').toUpperCase().trim();
+    var symbol = um(req.query.symbol).toUpperCase().trim();
     if (!symbol) {
       res.status(400).json({ erro: 'Falta o parâmetro symbol' });
       return;
@@ -21,7 +23,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    var dados = await resposta.json();
+    var dados = (await resposta.json()) as { chart?: { result?: { meta?: Record<string, any> }[] } };
     var resultado = dados && dados.chart && dados.chart.result && dados.chart.result[0];
     if (!resultado || !resultado.meta || resultado.meta.regularMarketPrice === undefined) {
       res.status(404).json({ erro: 'Símbolo não encontrado: ' + symbol });
@@ -42,6 +44,6 @@ module.exports = async function handler(req, res) {
       minimo: meta.regularMarketDayLow || preco
     });
   } catch (e) {
-    res.status(500).json({ erro: String(e.message || e) });
+    res.status(500).json({ erro: msg(e) });
   }
-};
+}

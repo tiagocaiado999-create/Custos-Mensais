@@ -1,19 +1,12 @@
-const Redis = require('ioredis');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type Redis from 'ioredis';
+import { getCliente } from './_redis';
+import { exigirSessao } from './_sessao';
+import { msg } from './_util';
 
 // A chave dos dados é a mesma de sempre: os dados existentes ficam exatamente onde estavam.
 const CHAVE = 'custos-mensais-dados';
 const CHAVE_VERSAO = 'custos-mensais-versao';
-let cliente;
-
-function getCliente() {
-  if (!cliente) {
-    const url = process.env.CustoMensal_REDIS_URL || process.env.REDIS_URL;
-    if (!url) throw new Error('Variável de ligação ao Redis não encontrada');
-    cliente = new Redis(url);
-  }
-  return cliente;
-}
-
 // Grava só se a versão enviada for a versão atual (operação atómica no Redis).
 const SCRIPT_GRAVAR = `
 local v = tonumber(redis.call('GET', KEYS[2]) or '0')
@@ -25,7 +18,7 @@ return {1, v + 1}
 
 // Cópias de segurança: uma "original" (nunca expira) e uma por hora (guardadas 60 dias),
 // sempre com o estado ANTES da primeira gravação dessa hora.
-async function fazerBackup(redis) {
+async function fazerBackup(redis: Redis) {
   const atual = await redis.get(CHAVE);
   if (!atual) return;
   await redis.set(CHAVE + '-backup-original', atual, 'NX');
@@ -33,14 +26,12 @@ async function fazerBackup(redis) {
   await redis.set(CHAVE + '-backup:' + hora, atual, 'EX', 60 * 60 * 24 * 60, 'NX');
 }
 
-async function lerAtual(redis) {
+async function lerAtual(redis: Redis) {
   const [raw, v] = await redis.mget(CHAVE, CHAVE_VERSAO);
   return { dados: raw ? JSON.parse(raw) : null, versao: parseInt(v || '0', 10) || 0 };
 }
 
-const { exigirSessao } = require('./_sessao');
-
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!exigirSessao(req, res)) return;
   try {
     const redis = getCliente();
@@ -69,9 +60,9 @@ module.exports = async function handler(req, res) {
         return;
       }
       await fazerBackup(redis);
-      const [ok, nova] = await redis.eval(
+      const [ok, nova] = (await redis.eval(
         SCRIPT_GRAVAR, 2, CHAVE, CHAVE_VERSAO, String(corpo.versao), JSON.stringify(corpo.dados)
-      );
+      )) as [number, number];
       if (Number(ok) === 1) {
         res.status(200).json({ ok: true, versao: Number(nova) });
         return;
@@ -83,6 +74,6 @@ module.exports = async function handler(req, res) {
 
     res.status(405).json({ erro: 'Método não permitido' });
   } catch (e) {
-    res.status(500).json({ erro: String(e.message || e) });
+    res.status(500).json({ erro: msg(e) });
   }
-};
+}

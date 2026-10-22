@@ -1,5 +1,7 @@
-const Redis = require('ioredis');
-const sessao = require('./_sessao');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type Redis from 'ioredis';
+import { getCliente } from './_redis';
+import * as sessao from './_sessao';
 
 // Entrar / sair / ver se há sessão.
 //   GET    -> { ativa, autenticado }
@@ -9,23 +11,12 @@ const sessao = require('./_sessao');
 const PREFIXO = 'custos-mensais-login-falhas:';
 const MAX_FALHAS = 5;
 const JANELA = 15 * 60;
-let cliente;
-
-function getCliente() {
-  if (!cliente) {
-    const url = process.env.CustoMensal_REDIS_URL || process.env.REDIS_URL;
-    if (!url) throw new Error('Variável de ligação ao Redis não encontrada');
-    cliente = new Redis(url);
-  }
-  return cliente;
-}
-
-function ipDe(req) {
+function ipDe(req: VercelRequest) {
   const h = String((req.headers && req.headers['x-forwarded-for']) || '').split(',')[0].trim();
   return h || 'desconhecido';
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'GET') { res.status(200).json({ ativa: sessao.ativa(), autenticado: sessao.temSessao(req) }); return; }
   if (req.method === 'DELETE') { res.setHeader('Set-Cookie', sessao.cookieSair()); res.status(200).json({ ok: true }); return; }
@@ -57,4 +48,4 @@ module.exports = async function handler(req, res) {
     }
   } catch (e) {}
   res.status(401).json({ erro: 'Palavra-passe errada' });
-};
+}

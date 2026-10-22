@@ -1,4 +1,8 @@
-const Redis = require('ioredis');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type Redis from 'ioredis';
+import { getCliente } from './_redis';
+import { exigirSessao } from './_sessao';
+import { msg } from './_util';
 
 // Envia por email uma cópia completa (mesmo formato da cópia descarregada na página de gestão).
 //   GET  -> chamado pelo agendamento da Vercel (exige CRON_SECRET)
@@ -12,23 +16,12 @@ const IMG = 'custos-mensais-fatura-img:';
 const CHAVE_ULTIMO_ENVIO = 'custos-mensais-ultimo-envio';
 const CHAVE_ULTIMA_COPIA = 'custos-mensais-ultima-copia';
 const MAX_ANEXO = 28 * 1024 * 1024; // o limite do email é ~40 MB depois de o anexo ser codificado em base64
-let cliente;
-
-function getCliente() {
-  if (!cliente) {
-    const url = process.env.CustoMensal_REDIS_URL || process.env.REDIS_URL;
-    if (!url) throw new Error('Variável de ligação ao Redis não encontrada');
-    cliente = new Redis(url);
-  }
-  return cliente;
-}
-
-async function montarCopia(redis, comFotos) {
+async function montarCopia(redis: Redis, comFotos: boolean) {
   const [rawDados, versao, rawCarro, todas] = await Promise.all([
     redis.get(CHAVE), redis.get(CHAVE_VERSAO), redis.get(CHAVE_CARRO), redis.hgetall(INDICE)
   ]);
-  const metas = Object.values(todas || {}).map((v) => { try { return JSON.parse(v); } catch (e) { return null; } }).filter(Boolean);
-  const faturas = [];
+  const metas = Object.values((todas || {}) as Record<string, string>).map((v) => { try { return JSON.parse(v); } catch (e) { return null; } }).filter(Boolean);
+  const faturas: { id: string; meta: { id: string; temImagem?: boolean }; imagem: string | null }[] = [];
   for (const meta of metas) {
     let imagem = null;
     if (comFotos && meta.temImagem) {
@@ -46,7 +39,7 @@ async function montarCopia(redis, comFotos) {
   };
 }
 
-async function enviar(redis) {
+async function enviar(redis: Redis) {
   const chave = process.env.RESEND_API_KEY, para = process.env.EMAIL_COPIA;
   if (!chave || !para) throw new Error('Faltam as variáveis RESEND_API_KEY ou EMAIL_COPIA');
 
@@ -71,15 +64,13 @@ async function enviar(redis) {
   });
   if (!r.ok) {
     let msg = 'HTTP ' + r.status;
-    try { const j = await r.json(); msg += ' ' + (j.message || j.name || ''); } catch (e) {}
+    try { const j = (await r.json()) as { message?: string; name?: string }; msg += ' ' + (j.message || j.name || ''); } catch (e) {}
     throw new Error('O serviço de email recusou o envio (' + msg.trim() + ')');
   }
   return { bytes: Buffer.byteLength(texto), semFotos, faturas: copia.faturas.length };
 }
 
-const { exigirSessao } = require('./_sessao');
-
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST' && !exigirSessao(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   let redis;
@@ -106,10 +97,10 @@ module.exports = async function handler(req, res) {
       await redis.set(CHAVE_ULTIMA_COPIA, quando);
       res.status(200).json(Object.assign({ ok: true, quando }, r));
     } catch (e) {
-      await redis.set(CHAVE_ULTIMO_ENVIO, JSON.stringify({ quando, ok: false, erro: String(e.message || e) })).catch(() => {});
-      res.status(500).json({ erro: String(e.message || e) });
+      await redis.set(CHAVE_ULTIMO_ENVIO, JSON.stringify({ quando, ok: false, erro: msg(e) })).catch(() => {});
+      res.status(500).json({ erro: msg(e) });
     }
   } catch (e) {
-    res.status(500).json({ erro: String(e.message || e) });
+    res.status(500).json({ erro: msg(e) });
   }
-};
+}

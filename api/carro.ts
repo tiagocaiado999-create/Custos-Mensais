@@ -1,19 +1,12 @@
-const Redis = require('ioredis');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type Redis from 'ioredis';
+import { getCliente } from './_redis';
+import { exigirSessao } from './_sessao';
+import { msg } from './_util';
 
 // Dados da página do carro (um único documento), com versão para evitar que duas pessoas se sobreponham.
 const CHAVE = 'custos-mensais-carro';
 const CHAVE_VERSAO = 'custos-mensais-carro-versao';
-let cliente;
-
-function getCliente() {
-  if (!cliente) {
-    const url = process.env.CustoMensal_REDIS_URL || process.env.REDIS_URL;
-    if (!url) throw new Error('Variável de ligação ao Redis não encontrada');
-    cliente = new Redis(url);
-  }
-  return cliente;
-}
-
 const SCRIPT_GRAVAR = `
 local v = tonumber(redis.call('GET', KEYS[2]) or '0')
 if v ~= tonumber(ARGV[1]) then return {0, v} end
@@ -22,14 +15,12 @@ redis.call('SET', KEYS[2], tostring(v + 1))
 return {1, v + 1}
 `;
 
-async function lerAtual(redis) {
+async function lerAtual(redis: Redis) {
   const [raw, v] = await redis.mget(CHAVE, CHAVE_VERSAO);
   return { dados: raw ? JSON.parse(raw) : null, versao: parseInt(v || '0', 10) || 0 };
 }
 
-const { exigirSessao } = require('./_sessao');
-
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!exigirSessao(req, res)) return;
   try {
     const redis = getCliente();
@@ -51,7 +42,7 @@ module.exports = async function handler(req, res) {
       // cópia por hora (sem mexer nas cópias dos dados principais), guardada 60 dias
       const atual = await redis.get(CHAVE);
       if (atual) await redis.set(CHAVE + '-backup:' + new Date().toISOString().slice(0, 13), atual, 'EX', 60 * 60 * 24 * 60, 'NX');
-      const [ok, nova] = await redis.eval(SCRIPT_GRAVAR, 2, CHAVE, CHAVE_VERSAO, String(corpo.versao), texto);
+      const [ok, nova] = (await redis.eval(SCRIPT_GRAVAR, 2, CHAVE, CHAVE_VERSAO, String(corpo.versao), texto)) as [number, number];
       if (Number(ok) === 1) { res.status(200).json({ ok: true, versao: Number(nova) }); return; }
       const outro = await lerAtual(redis);
       res.status(409).json({ erro: 'Conflito de versão', versao: outro.versao, dados: outro.dados });
@@ -60,6 +51,6 @@ module.exports = async function handler(req, res) {
 
     res.status(405).json({ erro: 'Método não permitido' });
   } catch (e) {
-    res.status(500).json({ erro: String(e.message || e) });
+    res.status(500).json({ erro: msg(e) });
   }
-};
+}

@@ -6,7 +6,7 @@ Orientações para o Claude Code neste repositório.
 
 Custos Mensais: site pessoal (PWA) para o Tiago e a Cláudia registarem gastos, poupança, investimentos e faturas, mais um simulador do carro elétrico. Interface, comentários e nomes em português (PT-PT). Publicado na Vercel (cada push para `main` faz o deploy): https://gastosmensais-delta.vercel.app
 
-Sem framework, sem build, sem TypeScript: HTML + CSS + JavaScript puro em `public/`, e funções serverless em `api/` (Node, `ioredis`). Os dados ficam no Redis, nunca em ficheiros.
+Sem framework e sem build no site: HTML + CSS + JavaScript puro em `public/`. As funções serverless em `api/` são **TypeScript** (`.ts`, Node, `ioredis`), compiladas pela própria Vercel. Os dados ficam no Redis, nunca em ficheiros.
 
 ## Gerir tokens: lê só o que precisas
 
@@ -39,7 +39,7 @@ Os ficheiros são grandes. Não leias um ficheiro inteiro para mexer numa funç�
 - `jsconfig.json` + JSDoc em `js/nucleo.js`: tipos só como documentação no editor (sem build). Texto escrito pelo utilizador que vá para `innerHTML` passa sempre por `esc()` (`nucleo.js`).
 - `sw.js`: service worker (rede primeiro, cache offline). `vendor/`: `jsQR`, `xlsx`.
 
-`api/` (funções serverless): `data.js` (dados principais), `carro.js`, `faturas.js`, `backups.js`, `estado.js`, `preco.js`, `copia-email.js` (cron semanal, `vercel.json`), `login.js` (entrar/sair) e `_sessao.js` (verificação da palavra-passe; o `_` impede que seja uma rota).
+`api/` (funções serverless, TypeScript): `data.ts` (dados principais), `carro.ts`, `faturas.ts`, `backups.ts`, `estado.ts`, `preco.ts`, `copia-email.ts` (cron semanal, `vercel.json` aponta para este ficheiro), `login.ts` (entrar/sair). Partilhados (o `_` impede que sejam rotas): `_sessao.ts` (palavra-passe), `_redis.ts` (ligação ao Redis), `_util.ts` (`msg`, `um`). **Antes de publicar corre `npm run typecheck` (tem de dar 0 erros)**: a Vercel falha o build se houver erros de tipos.
 
 ## Regras que não podes quebrar
 
@@ -51,7 +51,7 @@ Os ficheiros são grandes. Não leias um ficheiro inteiro para mexer numa funç�
 
 ## Como verificar alterações
 
-Não há testes automáticos nem Node instalado nesta máquina. O que funcionou: servir `public/` num servidor local simples (PowerShell `HttpListener`) com respostas simuladas de `/api/data` e `/api/carro`, abrir no Chrome em modo headless (`--dump-dom`, ou `--screenshot` com `--window-size` alto) e comparar com a versão anterior do git. Confirmar sempre também no site publicado, depois do deploy.
+Node está instalado (`npm install` cria `node_modules`, ignorado pelo git). `npm run typecheck` verifica as `api/`. Testes da API: compilar com `npx tsc -p . --noEmit false --outDir <pasta>` e correr com um `ioredis` falso em memória. Não há testes automáticos no repositório. O que funcionou: servir `public/` num servidor local simples (PowerShell `HttpListener`) com respostas simuladas de `/api/data` e `/api/carro`, abrir no Chrome em modo headless (`--dump-dom`, ou `--screenshot` com `--window-size` alto) e comparar com a versão anterior do git. Confirmar sempre também no site publicado, depois do deploy.
 
 ## Ambiente
 
@@ -64,7 +64,7 @@ Windows, PowerShell. Atenção: um deploy pendente na Vercel faz parecer que a a
 - Toda a função em `api/` começa com `exigirSessao(req, res)` (de `_sessao.js`). Uma função nova **tem de ter esta linha**. Exceção: o `GET` de `copia-email.js` (cron) usa `CRON_SECRET`.
 - Sessão = cookie `cm_sessao` (30 dias, HttpOnly). Máximo de 5 tentativas falhadas por IP em 15 minutos (`login.js`, guardado no Redis).
 - As páginas HTML e os `js/` são públicos (não têm dados); o que está protegido são os dados, via API.
-- Testar a lógica da API: o VS Code traz um Node (`ELECTRON_RUN_AS_NODE=1 "…/Microsoft VS Code/Code.exe" ficheiro.js`), com um `ioredis` falso em memória.
+- Testar a lógica da API: ver "Como verificar alterações".
 
 ## Variáveis de ambiente e segredos
 

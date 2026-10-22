@@ -3,6 +3,6 @@
     { "path": "/api/copia-email", "schedule": "0 6 * * 1" }
   ],
   "functions": {
-    "api/copia-email.js": { "maxDuration": 60 }
+    "api/copia-email.ts": { "maxDuration": 60 }
   }
 }

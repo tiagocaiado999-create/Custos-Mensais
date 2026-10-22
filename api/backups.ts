@@ -1,4 +1,8 @@
-const Redis = require('ioredis');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type Redis from 'ioredis';
+import { getCliente } from './_redis';
+import { exigirSessao } from './_sessao';
+import { msg, um } from './_util';
 
 // Cópias de segurança criadas pelo data.js:
 //   custos-mensais-dados-backup-original   (estado antes das atualizações, nunca expira)
@@ -9,17 +13,6 @@ const CHAVE_VERSAO = 'custos-mensais-versao';
 const PREFIXO = CHAVE + '-backup';
 const CHAVE_ULTIMA_COPIA = 'custos-mensais-ultima-copia';
 const ID_OK = /^(-original|:\d{4}-\d{2}-\d{2}T\d{2}|-antes:\d{4}-\d{2}-\d{2}T[0-9:.]+Z)$/;
-let cliente;
-
-function getCliente() {
-  if (!cliente) {
-    const url = process.env.CustoMensal_REDIS_URL || process.env.REDIS_URL;
-    if (!url) throw new Error('Variável de ligação ao Redis não encontrada');
-    cliente = new Redis(url);
-  }
-  return cliente;
-}
-
 // Substitui os dados e sobe a versão (os outros aparelhos recebem a versão restaurada)
 const SCRIPT_RESTAURAR = `
 local v = tonumber(redis.call('GET', KEYS[2]) or '0') + 1
@@ -28,11 +21,14 @@ redis.call('SET', KEYS[2], tostring(v))
 return v
 `;
 
-function resumir(d) {
+type Lista = { valor?: number }[] | undefined;
+type Doc = Record<string, any> | null | undefined;
+
+function resumir(d: Doc) {
   d = d || {};
   const r = { meses: 0, lancamentos: 0, gastos: 0, poupancas: 0, poupado: 0, investimentos: 0 };
-  const meses = new Set();
-  const somar = (lista, chave) => (lista || []).forEach((i) => {
+  const meses = new Set<string>();
+  const somar = (lista: Lista, chave?: string) => (lista || []).forEach((i) => {
     if (chave === 'poup') { r.poupancas++; r.poupado += Number(i.valor) || 0; }
     else { r.lancamentos++; r.gastos += Number(i.valor) || 0; }
   });
@@ -57,16 +53,15 @@ function resumir(d) {
   return r;
 }
 
-const { exigirSessao } = require('./_sessao');
-
-module.exports = async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!exigirSessao(req, res)) return;
   try {
     const redis = getCliente();
     res.setHeader('Cache-Control', 'no-store');
     const q = req.query || {};
+    const id = um(q.id);
 
-    if (req.method === 'GET' && !q.id) {
+    if (req.method === 'GET' && !id) {
       const chaves = await redis.keys(PREFIXO + '*');
       const lista = chaves.map((k) => k.slice(PREFIXO.length)).filter((id) => ID_OK.test(id)).map((id) => {
         if (id === '-original') return { id, tipo: 'original', quando: null };
@@ -78,11 +73,11 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      if (!ID_OK.test(q.id)) { res.status(400).json({ erro: 'Id inválido' }); return; }
-      const raw = await redis.get(PREFIXO + q.id);
+      if (!ID_OK.test(id)) { res.status(400).json({ erro: 'Id inválido' }); return; }
+      const raw = await redis.get(PREFIXO + id);
       if (!raw) { res.status(404).json({ erro: 'Cópia não encontrada' }); return; }
       const atual = await redis.get(CHAVE);
-      res.status(200).json({ id: q.id, copia: resumir(JSON.parse(raw)), atual: resumir(atual ? JSON.parse(atual) : {}) });
+      res.status(200).json({ id, copia: resumir(JSON.parse(raw)), atual: resumir(atual ? JSON.parse(atual) : {}) });
       return;
     }
 
@@ -104,7 +99,7 @@ module.exports = async function handler(req, res) {
         }
         const atualImp = await redis.get(CHAVE);
         if (atualImp) await redis.set(PREFIXO + '-antes:' + new Date().toISOString(), atualImp, 'EX', 60 * 60 * 24 * 60);
-        const versaoImp = await redis.eval(SCRIPT_RESTAURAR, 2, CHAVE, CHAVE_VERSAO, JSON.stringify(d));
+        const versaoImp = (await redis.eval(SCRIPT_RESTAURAR, 2, CHAVE, CHAVE_VERSAO, JSON.stringify(d))) as number;
         res.status(200).json({ ok: true, versao: Number(versaoImp) });
         return;
       }
@@ -113,13 +108,13 @@ module.exports = async function handler(req, res) {
       if (!raw) { res.status(404).json({ erro: 'Cópia não encontrada' }); return; }
       const atual = await redis.get(CHAVE);
       if (atual) await redis.set(PREFIXO + '-antes:' + new Date().toISOString(), atual, 'EX', 60 * 60 * 24 * 60);
-      const versao = await redis.eval(SCRIPT_RESTAURAR, 2, CHAVE, CHAVE_VERSAO, raw);
+      const versao = (await redis.eval(SCRIPT_RESTAURAR, 2, CHAVE, CHAVE_VERSAO, raw)) as number;
       res.status(200).json({ ok: true, versao: Number(versao) });
       return;
     }
 
     res.status(405).json({ erro: 'Método não permitido' });
   } catch (e) {
-    res.status(500).json({ erro: String(e.message || e) });
+    res.status(500).json({ erro: msg(e) });
   }
-};
+}
