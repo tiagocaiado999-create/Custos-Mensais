@@ -1,5 +1,5 @@
   // ---------- Ler QR de fatura (AT) ----------
-  var qaStream = null, qaScan = false, qaDetector = null, qaAvisoTimer = null;
+  var qaStream = null, qaScan = false, qaDetector = null, qaAvisoTimer = null, qaFrames = 0;
   var JSQR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
   function carregarScript(src){
     return new Promise(function(resolve, reject){
@@ -84,8 +84,14 @@
   function lerFrame(){
     var v = byId('qaVideo');
     if(!v.videoWidth) return Promise.resolve(null);
-    if(qaDetector) return qaDetector.detect(v).then(function(r){ return r.length ? r[0].rawValue : null; });
-    return Promise.resolve(descodificarCanvas(v, v.videoWidth, v.videoHeight, 960));
+    qaFrames++;
+    // o leitor nativo do telemóvel falha em silêncio com algumas câmaras: se não ler, o jsQR tenta em frames alternados
+    var viaJs = function(){ return window.jsQR ? descodificarCanvas(v, v.videoWidth, v.videoHeight, 960, qaFrames % 4 === 0) : null; };
+    if(qaDetector){
+      return qaDetector.detect(v).then(function(r){ return r.length ? r[0].rawValue : (qaFrames % 2 ? null : viaJs()); })
+        .catch(function(){ return viaJs(); });
+    }
+    return Promise.resolve(viaJs());
   }
   function qrLoop(){
     if(!qaScan) return;
@@ -121,9 +127,10 @@
     qaScan = true;
     qaDetector = null;
     try{ if('BarcodeDetector' in window) qaDetector = new BarcodeDetector({ formats: ['qr_code'] }); }catch(e){ qaDetector = null; }
-    if(!qaDetector){
-      try{ await carregarJsQR(); }
-      catch(e){ msg.textContent = 'Não foi possível carregar o leitor de QR (falta o ficheiro vendor/jsQR.js ou a internet). Usa o modo Manual.'; qrParar(); return; }
+    qaFrames = 0;
+    try{ await carregarJsQR(); }
+    catch(e){
+      if(!qaDetector){ msg.textContent = 'Não foi possível carregar o leitor de QR (falta o ficheiro vendor/jsQR.js ou a internet). Usa o modo Manual.'; qrParar(); return; }
     }
     qrLoop();
   }
