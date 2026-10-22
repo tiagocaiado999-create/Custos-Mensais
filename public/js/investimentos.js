@@ -104,7 +104,7 @@
       var temTicker = !!inv.ticker;
       var temAtual = temValorAtualDe(inv);
       var valorAtualEfetivo = valorAtualDe(inv);
-      var metaTxt = 'investido ' + euros(inv.valor) + (inv.data ? ' · ' + formatarData(inv.data) : '') + (temTicker ? ' · ' + inv.ticker : '');
+      var metaTxt = 'investido ' + euros(inv.valor) + (inv.data ? ' · ' + formatarData(inv.data) : '') + (temTicker ? ' · ' + esc(inv.ticker) : '');
       if(temAtual){
         var lucroPot = valorAtualEfetivo - Number(inv.valor);
         var pctPot = inv.valor > 0 ? (lucroPot / inv.valor * 100) : 0;
@@ -112,7 +112,7 @@
       } else if(temTicker){
         metaTxt += ' · a obter preço…';
       }
-      nomeEl.innerHTML = inv.nome + '<br><span class="meta' + (temAtual ? (valorAtualEfetivo >= Number(inv.valor) ? ' lucro-pos' : ' lucro-neg') : '') + '">' + metaTxt + '</span>';
+      nomeEl.innerHTML = esc(inv.nome) + '<br><span class="meta' + (temAtual ? (valorAtualEfetivo >= Number(inv.valor) ? ' lucro-pos' : ' lucro-neg') : '') + '">' + metaTxt + '</span>';
 
       var dataInput = document.createElement('input');
       dataInput.type = 'date';
@@ -225,7 +225,7 @@
       var nomeEl = document.createElement('div');
       nomeEl.className = 'nome';
       var metaTxt = 'investido ' + euros(inv.valorInvestido) + (inv.dataInvestido ? ' (' + formatarData(inv.dataInvestido) + ')' : '') + ' · retirado ' + euros(inv.valorRetirado) + (inv.data ? ' (' + formatarData(inv.data) + ')' : '');
-      nomeEl.innerHTML = inv.nome + '<br><span class="meta">' + metaTxt + '</span>';
+      nomeEl.innerHTML = esc(inv.nome) + '<br><span class="meta">' + metaTxt + '</span>';
       var lucroEl = document.createElement('div');
       lucroEl.className = 'valor ' + (lucro >= 0 ? 'lucro-pos' : 'lucro-neg');
       lucroEl.textContent = (lucro >= 0 ? '+' : '') + euros(lucro) + ' (' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%)';

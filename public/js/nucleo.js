@@ -1,4 +1,14 @@
   var STORAGE_KEY = 'custos-mensais-pessoas-v2';
+  /**
+   * Tipos dos dados (só documentação: o VS Code mostra-os ao passar o rato; não há build).
+   * @typedef {{ id: string, nome: string, valor: number, categoria?: string, data?: string, fatura?: string }} Item
+   * @typedef {{ salario: number, fixo: Item[], opcional: Item[], poupanca: Item[], investido: Item[] }} Mes
+   * @typedef {{ id: string, nome: string, valor: number, data?: string, ticker?: string }} Ativo
+   * @typedef {{ ativos: Ativo[], retirados: object[] }} Investimentos
+   * @typedef {{ tiago: Object<string, Mes>, claudia: Object<string, Mes>, casalOpcional: Object<string, Mes>,
+   *   lojas: Object<string, { nome: string, categoria?: string }>,
+   *   investimentos: { tiago: Investimentos, claudia: Investimentos } }} Dados
+   */
   var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   var mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   var nomesPessoa = { tiago:'Tiago', claudia:'Cláudia', casal:'Casal' };
@@ -28,10 +38,16 @@
   var mesAtual = agora.getMonth();
   var pessoaAtual = 'tiago';
 
+  /** @param {number} ano @param {number} mes mês de 0 a 11 @returns {string} 'AAAA-MM' */
   function chave(ano, mes){ return ano + '-' + String(mes+1).padStart(2,'0'); }
   function mesVazio(){ return { salario: 0, fixo: [], opcional: [], poupanca: [], investido: [] }; }
   function uid(){ return 'x' + Math.random().toString(36).slice(2,9); }
+  // escapa texto escrito pelo utilizador antes de o pôr em innerHTML
+  /** @param {*} s @returns {string} */
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  /** @param {number} n @returns {string} */
   function euros(n){ return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(n||0); }
+  /** @param {Item[]} lista @returns {number} */
   function somaLista(lista){ return lista.reduce(function(s,i){ return s + (Number(i.valor)||0); }, 0); }
 
   function investVazio(){ return { ativos: [], retirados: [] }; }
@@ -47,6 +63,7 @@
       if(item.data === undefined) item.data = '';
     });
   }
+  /** Migra dados antigos para a estrutura atual. @param {*} d @returns {Dados} */
   function normalizar(d){
     if(!d) d = {};
     if(!d.tiago) d.tiago = {};

@@ -36,6 +36,7 @@ Os ficheiros são grandes. Não leias um ficheiro inteiro para mexer numa funç�
 - `gestao.html`: cópia completa, envio por email, estado do armazenamento. Ligação "Gestão" no topo da página principal, ao lado do botão de tema.
 - `tema.js` + `tema.css`: modo escuro/claro e estilos do topo, em todas as páginas (ver "Tema escuro" abaixo).
 - `login.html` + `auth.js`: página de entrada e o aviso que leva para ela quando a API responde 401 (carregado por todas as páginas).
+- `jsconfig.json` + JSDoc em `js/nucleo.js`: tipos só como documentação no editor (sem build). Texto escrito pelo utilizador que vá para `innerHTML` passa sempre por `esc()` (`nucleo.js`).
 - `sw.js`: service worker (rede primeiro, cache offline). `vendor/`: `jsQR`, `xlsx`.
 
 `api/` (funções serverless): `data.js` (dados principais), `carro.js`, `faturas.js`, `backups.js`, `estado.js`, `preco.js`, `copia-email.js` (cron semanal, `vercel.json`), `login.js` (entrar/sair) e `_sessao.js` (verificação da palavra-passe; o `_` impede que seja uma rota).
