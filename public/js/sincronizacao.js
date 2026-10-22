@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Sincronização ----------
   var SYNC_KEY = 'custos-mensais-sync-v3';
   var RECUPERADO_KEY = 'custos-mensais-recuperado-v3';
@@ -121,7 +122,7 @@
           var edicaoAntes = edicao;
           var local = limpar(dados);
           var resp = await fetch('/api/data', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ versao: versao, dados: local }) });
-          var json = {};
+          /** @type {any} */ var json = {};
           try{ json = await resp.json(); }catch(e){}
           if(resp.ok){
             versao = json.versao; base = local;

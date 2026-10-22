@@ -1,3 +1,4 @@
+// @ts-check
   var STORAGE_KEY = 'custos-mensais-pessoas-v2';
   /**
    * Tipos dos dados (só documentação: o VS Code mostra-os ao passar o rato; não há build).
@@ -7,7 +8,7 @@
    * @typedef {{ ativos: Ativo[], retirados: object[] }} Investimentos
    * @typedef {{ tiago: Object<string, Mes>, claudia: Object<string, Mes>, casalOpcional: Object<string, Mes>,
    *   lojas: Object<string, { nome: string, categoria?: string }>,
-   *   investimentos: { tiago: Investimentos, claudia: Investimentos } }} Dados
+   *   investimentos: { tiago: Investimentos, claudia: Investimentos, casal: Investimentos } }} Dados
    */
   var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   var mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];

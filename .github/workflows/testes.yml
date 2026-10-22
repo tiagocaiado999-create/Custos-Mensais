@@ -1,0 +1,18 @@
+name: Testes
+
+# Corre em cada push e em cada pull request. Se falhar, o GitHub avisa por email e mostra a cruz vermelha no commit.
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test

@@ -64,7 +64,8 @@
     if(!ok){
       var ac = document.getElementById('aCarregar');
       ac.className = 'erro-ligacao';
-      ac.innerHTML = 'Não foi possível ligar ao servidor, por isso os dados não foram carregados (para não correr o risco de os apagar).<br><button type="button" onclick="location.reload()">Tentar de novo</button>';
+      ac.innerHTML = 'Não foi possível ligar ao servidor, por isso os dados não foram carregados (para não correr o risco de os apagar).<br><button type="button">Tentar de novo</button>';
+      ac.querySelector('button').addEventListener('click', function(){ location.reload(); });
       return;
     }
     iniciado = true;
