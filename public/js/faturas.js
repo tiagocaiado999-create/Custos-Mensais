@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Faturas guardadas (garantias) ----------
   var qaImagem = null, qaQrTexto = null, qaNat = 'gasto';
   var faturasCache = null, fatAtual = null, fatUrl = null;

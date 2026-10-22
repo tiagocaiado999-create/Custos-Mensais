@@ -1,5 +1,7 @@
+// @ts-check
   // ---------- Gráfico por categoria (com comparação ao mês anterior) ----------
   var catTipo = 'todos';
+  /** Elemento da página pelo id. Devolve `any`: cada id tem o seu tipo (input, video…) e o TypeScript não o sabe. @param {string} id @returns {any} */
   function byId(id){ return document.getElementById(id); }
   function itensDoMes(pessoa, ano, mes, tipo){
     var v = vistaMes(pessoa, ano, mes);

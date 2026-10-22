@@ -1,3 +1,4 @@
+// @ts-check
   // Preços em tempo real (via proxy /api/preco). precosCache guarda o último preço obtido por ticker.
   var precosCache = {};
   var precosPendentes = {};
@@ -251,16 +252,16 @@
   }
 
   document.getElementById('investAddBtn').addEventListener('click', async function(){
-    var nomeEl = document.getElementById('investNovoNome');
-    var tickerEl = document.getElementById('investNovoTicker');
-    var valorEl = document.getElementById('investNovoValor');
-    var dataEl = document.getElementById('investNovaData');
+    var nomeEl = /** @type {HTMLInputElement} */ (document.getElementById('investNovoNome'));
+    var tickerEl = /** @type {HTMLInputElement} */ (document.getElementById('investNovoTicker'));
+    var valorEl = /** @type {HTMLInputElement} */ (document.getElementById('investNovoValor'));
+    var dataEl = /** @type {HTMLInputElement} */ (document.getElementById('investNovaData'));
     var ticker = tickerEl.value.trim().toUpperCase();
     var nome = nomeEl.value.trim() || ticker;
     if(!nome) return;
 
     var precoCompra = '';
-    var btn = document.getElementById('investAddBtn');
+    var btn = /** @type {HTMLButtonElement} */ (document.getElementById('investAddBtn'));
     if(ticker){
       btn.disabled = true; btn.textContent = 'A obter preço…';
       var preco = await buscarPrecoTicker(ticker);

@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Resumo do mês em frases ----------
   function renderResumoFrases(){
     var cont = byId('resumoFrases');

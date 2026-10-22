@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Poupança e investimentos do mês (listas simples) ----------
   var LISTAS_MES = {
     poupanca: { campo:'poupanca', container:'secaoPoupanca', titulo:'Conta poupança', dot:'poup', vazio:'Sem transferências para a poupança este mês.', nota:'Nota (opcional)', notaCasal:'Poupança conjunta (nota)', padrao:'Transferência', acumulado:true },

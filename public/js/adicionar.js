@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Adicionar rápido (botão +) ----------
   var qaCat = 'comida', qaToastTimer = null, qaNif = null, qaFatura = null;
   function qaRenderCats(){

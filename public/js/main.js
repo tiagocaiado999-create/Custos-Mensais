@@ -1,3 +1,4 @@
+// @ts-check
   function mostrarTab(tab){
     document.getElementById('viewExtrato').hidden = tab !== 'extrato';
     document.getElementById('viewGrafico').hidden = tab !== 'grafico';

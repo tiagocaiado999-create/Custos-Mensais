@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Exportar (Excel .xlsx; CSV como alternativa) ----------
   var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   function carregarXLSX(){

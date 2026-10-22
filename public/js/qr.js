@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Ler QR de fatura (AT) ----------
   var qaStream = null, qaScan = false, qaDetector = null, qaAvisoTimer = null, qaFrames = 0;
   var JSQR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
@@ -144,7 +145,7 @@
   }
   byId('qaModoManual').addEventListener('click', function(){ qaModo('manual'); });
   byId('qaModoQr').addEventListener('click', function(){ qaModo('qr'); });
-  byId('qaFoto').addEventListener('change', async function(){
+  byId('qaFoto').addEventListener('change', /** @this {HTMLInputElement} */ async function(){
     var ficheiro = this.files && this.files[0];
     this.value = '';
     if(!ficheiro) return;
@@ -163,5 +164,5 @@
     }catch(e){ qrAviso('Não consegui ler a foto.'); }
   });
   // permite testar/injetar o texto de um QR sem câmara
-  document.addEventListener('qa-qr-texto', function(e){ qrTratar(e.detail); });
+  document.addEventListener('qa-qr-texto', function(/** @type {CustomEvent} */ e){ qrTratar(e.detail); });
 

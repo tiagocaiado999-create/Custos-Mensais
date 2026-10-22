@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Painel +: poupança e anexos ----------
   function qaNatureza(nat){
     qaNat = nat;
@@ -18,7 +19,7 @@
   byId('qaNatGasto').addEventListener('click', function(){ qaNatureza('gasto'); });
   byId('qaNatPoup').addEventListener('click', function(){ qaNatureza('poupanca'); });
   byId('qaNatInvest').addEventListener('click', function(){ qaNatureza('investido'); });
-  byId('qaAnexo').addEventListener('change', async function(){
+  byId('qaAnexo').addEventListener('change', /** @this {HTMLInputElement} */ async function(){
     var fi = this.files && this.files[0];
     this.value = '';
     if(!fi) return;

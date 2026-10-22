@@ -1,3 +1,4 @@
+// @ts-check
   // ---------- Cópias de segurança (restaurar versões antigas) ----------
   function bkQuando(b){
     if(b.tipo === 'original') return 'Original (antes das atualizações)';

@@ -1,3 +1,4 @@
+// @ts-check
   var dados = dadosDefault;
 
   function mesPessoa(pessoa, ano, mes){
