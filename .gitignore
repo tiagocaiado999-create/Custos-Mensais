@@ -15,3 +15,6 @@ Thumbs.db
 # Cópias completas descarregadas da página de gestão (têm os dados pessoais todos)
 custos-mensais-*.json
 privado/
+
+# Saída da compilação dos testes (npm test)
+.teste-build/

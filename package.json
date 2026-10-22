@@ -11,6 +11,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "test": "tsc -p . --noEmit false --outDir .teste-build && node --test \"tests/*.test.js\""
   }
 }

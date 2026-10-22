@@ -51,7 +51,7 @@ Os ficheiros são grandes. Não leias um ficheiro inteiro para mexer numa funç�
 
 ## Como verificar alterações
 
-Node está instalado (`npm install` cria `node_modules`, ignorado pelo git). `npm run typecheck` verifica as `api/`. Testes da API: compilar com `npx tsc -p . --noEmit false --outDir <pasta>` e correr com um `ioredis` falso em memória. Não há testes automáticos no repositório. O que funcionou: servir `public/` num servidor local simples (PowerShell `HttpListener`) com respostas simuladas de `/api/data` e `/api/carro`, abrir no Chrome em modo headless (`--dump-dom`, ou `--screenshot` com `--window-size` alto) e comparar com a versão anterior do git. Confirmar sempre também no site publicado, depois do deploy.
+Node está instalado (`npm install` cria `node_modules`, ignorado pelo git). **Antes de publicar corre `npm test`**: faz o typecheck das `api/`, compila-as para `.teste-build/` (ignorado) e corre os 35 testes de `tests/` com `node --test`: `dados.test.js` (`normalizar`, `fundir`, `esc`; carrega `public/js/*.js` num contexto isolado via `_navegador.js`), `qr.test.js` (`lerQrAT`) e `api.test.js` (sessão, limite de tentativas, versões/conflitos, cópias, faturas; usa um Redis em memória em `_api.js`). Uma função ou regra nova de dados deve ganhar o seu teste. `npm run typecheck` só verifica tipos. Para ver o aspeto: servir `public/` num servidor local simples (PowerShell `HttpListener`) com respostas simuladas de `/api/data` e `/api/carro`, abrir no Chrome em modo headless (`--dump-dom`, ou `--screenshot` com `--window-size` alto) e comparar com a versão anterior do git. Confirmar sempre também no site publicado, depois do deploy.
 
 ## Ambiente
 
