@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type Redis from 'ioredis';
 import { getCliente } from './_redis';
 import * as sessao from './_sessao';
 

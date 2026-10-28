@@ -237,5 +237,20 @@
   window.addEventListener('pagehide', enviarAoSair);
   window.addEventListener('online', function(){ sincronizar(); });
   window.addEventListener('focus', function(){ sincronizar(); });
-  setInterval(function(){ if(!document.hidden && iniciado) sincronizar(); }, 15000);
+  // Pergunta por novidades de minuto a minuto, e só enquanto a pessoa está a usar a app: se ficar 5 minutos
+  // sem mexer, pára de perguntar (poupa pedidos ao servidor) e volta a sincronizar logo que mexa outra vez.
+  // Alterações pendentes continuam a ser enviadas sempre (isso não depende deste intervalo).
+  var PARADO_MS = 5 * 60 * 1000;
+  var ultimaAtividade = Date.now();
+  function atividade(){
+    var parado = Date.now() - ultimaAtividade > PARADO_MS;
+    ultimaAtividade = Date.now();
+    if(parado && iniciado && !document.hidden) sincronizar();
+  }
+  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function(ev){
+    document.addEventListener(ev, atividade, { passive: true, capture: true });
+  });
+  setInterval(function(){
+    if(!document.hidden && iniciado && Date.now() - ultimaAtividade < PARADO_MS) sincronizar();
+  }, 60000);
 

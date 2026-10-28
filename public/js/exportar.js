@@ -51,7 +51,7 @@
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   function csvDe(folha){
-    function cel(v, ehData){
+    function cel(v){
       if(v instanceof Date) return v.toISOString().slice(8, 10) + '/' + v.toISOString().slice(5, 7) + '/' + v.toISOString().slice(0, 4);
       if(typeof v === 'number') return String(v).replace('.', ',');
       return '"' + String(v === undefined || v === null ? '' : v).replace(/"/g, '""') + '"';
@@ -70,7 +70,7 @@
       folhas.forEach(function(f){
         var ws = X.utils.aoa_to_sheet([f.cab].concat(f.linhas), { cellDates:true });
         ws['!cols'] = (f.larg || []).map(function(w){ return { wch:w }; });
-        f.linhas.forEach(function(l, r){
+        f.linhas.forEach(function(_, r){
           f.datas.forEach(function(c){ var cell = ws[X.utils.encode_cell({ r:r + 1, c:c })]; if(cell && cell.t === 'd') cell.z = 'dd/mm/yyyy'; });
           f.moeda.forEach(function(c){ var cell = ws[X.utils.encode_cell({ r:r + 1, c:c })]; if(cell && cell.t === 'n') cell.z = '#,##0.00'; });
         });

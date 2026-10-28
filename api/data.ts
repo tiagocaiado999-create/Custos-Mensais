@@ -38,13 +38,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'GET') {
-      const { dados, versao } = await lerAtual(redis);
       const q = req.query || {};
-      if (q.modo === 'v2') {
-        if (q.desde !== undefined && String(q.desde) === String(versao)) {
-          res.status(200).json({ versao, semAlteracoes: true });
+      if (q.modo === 'v2' && q.desde !== undefined) {
+        // pergunta frequente da página ("há novidades?"): lê só a versão, sem carregar os dados
+        const atualV = parseInt((await redis.get(CHAVE_VERSAO)) || '0', 10) || 0;
+        if (String(q.desde) === String(atualV)) {
+          res.status(200).json({ versao: atualV, semAlteracoes: true });
           return;
         }
+      }
+      const { dados, versao } = await lerAtual(redis);
+      if (q.modo === 'v2') {
         res.status(200).json({ versao, dados });
         return;
       }
