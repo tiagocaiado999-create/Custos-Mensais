@@ -11,14 +11,15 @@ import { msg } from './_util';
 const CHAVE = 'custos-mensais-dados';
 const CHAVE_VERSAO = 'custos-mensais-versao';
 const CHAVE_CARRO = 'custos-mensais-carro';
+const CHAVE_NEGOCIO = 'custos-mensais-negocio';
 const INDICE = 'custos-mensais-faturas';
 const IMG = 'custos-mensais-fatura-img:';
 const CHAVE_ULTIMO_ENVIO = 'custos-mensais-ultimo-envio';
 const CHAVE_ULTIMA_COPIA = 'custos-mensais-ultima-copia';
 const MAX_ANEXO = 28 * 1024 * 1024; // o limite do email é ~40 MB depois de o anexo ser codificado em base64
 async function montarCopia(redis: Redis, comFotos: boolean) {
-  const [rawDados, versao, rawCarro, todas] = await Promise.all([
-    redis.get(CHAVE), redis.get(CHAVE_VERSAO), redis.get(CHAVE_CARRO), redis.hgetall(INDICE)
+  const [rawDados, versao, rawCarro, rawNegocio, todas] = await Promise.all([
+    redis.get(CHAVE), redis.get(CHAVE_VERSAO), redis.get(CHAVE_CARRO), redis.get(CHAVE_NEGOCIO), redis.hgetall(INDICE)
   ]);
   const metas = Object.values((todas || {}) as Record<string, string>).map((v) => { try { return JSON.parse(v); } catch (e) { return null; } }).filter(Boolean);
   const faturas: { id: string; meta: { id: string; temImagem?: boolean }; imagem: string | null }[] = [];
@@ -35,7 +36,8 @@ async function montarCopia(redis: Redis, comFotos: boolean) {
     versaoDados: parseInt(versao || '0', 10) || 0,
     dados: rawDados ? JSON.parse(rawDados) : null,
     faturas,
-    carro: rawCarro ? JSON.parse(rawCarro) : null
+    carro: rawCarro ? JSON.parse(rawCarro) : null,
+    negocio: rawNegocio ? JSON.parse(rawNegocio) : null
   };
 }
 

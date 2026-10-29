@@ -1,0 +1,4 @@
+.mes-nav{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.mes-nav button{background:transparent;color:var(--fg);font-size:1.3rem;padding:6px 16px}
+.mes-nav strong{font-family:Georgia,serif;font-weight:600}
+.reg .d .m b{font-weight:600}

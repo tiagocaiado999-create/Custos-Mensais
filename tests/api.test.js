@@ -15,7 +15,7 @@ test.beforeEach(() => { novoRedis(); });
 // ---------- palavra-passe ----------
 
 test('sem sessão, todas as funções de dados respondem 401 e não tocam nos dados', async () => {
-  for (const nome of ['data', 'carro', 'faturas', 'estado', 'backups', 'preco']) {
+  for (const nome of ['data', 'carro', 'negocio', 'faturas', 'estado', 'backups', 'preco']) {
     const r = await chamar(nome, 'GET');
     assert.equal(r.codigo, 401, nome);
   }
@@ -121,6 +121,17 @@ test('carro: gravar, conflito de versão e limite de tamanho', async () => {
   const grande = await chamar('carro', 'POST', { body: { versao: 1, dados: { x: 'a'.repeat(500001) } }, headers: { cookie } });
   assert.equal(grande.codigo, 413);
   assert.equal((await chamar('carro', 'POST', { body: { dados: {} }, headers: { cookie } })).codigo, 400);
+});
+
+// ---------- negócio ----------
+
+test('negocio: gravar, ler e conflito de versão', async () => {
+  const cookie = await cookieDeSessao();
+  const ok = await chamar('negocio', 'POST', { body: { versao: 0, dados: { compras: [{ id: 'a', valor: 50 }], vendas: [] } }, headers: { cookie } });
+  assert.equal(ok.corpo.versao, 1);
+  const lido = await chamar('negocio', 'GET', { headers: { cookie } });
+  assert.equal(lido.corpo.dados.compras[0].valor, 50);
+  assert.equal((await chamar('negocio', 'POST', { body: { versao: 0, dados: {} }, headers: { cookie } })).codigo, 409);
 });
 
 // ---------- faturas ----------
