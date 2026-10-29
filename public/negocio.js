@@ -31,7 +31,7 @@
     var dd = document.createElement('div'); dd.className = 'd';
     var nome = document.createElement('div'); nome.textContent = x.nome || '(sem nome)';
     var m = document.createElement('div'); m.className = 'm';
-    m.textContent = fmtData(x.data) + (tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : '');
+    m.textContent = fmtData(x.data) + (tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId ? ' · vendida' : ''));
     dd.appendChild(nome); dd.appendChild(m);
     var v = document.createElement('div'); v.className = 'v ' + (tipo === 'vendas' ? 'verde' : 'verm');
     v.textContent = (tipo === 'vendas' ? '+' : '−') + euros(x.valor);
@@ -39,9 +39,16 @@
     b.addEventListener('click', function(){
       if(!confirm('Apagar «' + (x.nome || 'sem nome') + '»?')) return;
       d[tipo] = d[tipo].filter(function(y){ return y.id !== x.id; });
+      if(tipo === 'vendas') d.compras.forEach(function(c){ if(c.vendaId === x.id) delete c.vendaId; });   // a peça volta a estar por vender
       alterado();
     });
-    el.appendChild(dd); el.appendChild(v); el.appendChild(b);
+    el.appendChild(dd); el.appendChild(v);
+    if(tipo === 'compras' && !x.vendaId){
+      var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'vender'; vb.textContent = 'Vender';
+      vb.addEventListener('click', function(){ vender(x); });
+      el.appendChild(vb);
+    }
+    el.appendChild(b);
     return el;
   }
   function lista(id, itens, tipo){
@@ -115,6 +122,18 @@
     mes += delta;
     if(mes < 0){ mes = 11; ano--; } else if(mes > 11){ mes = 0; ano++; }
     render();
+  }
+  // Passa uma peça comprada para as vendidas: a compra fica (o dinheiro já saiu) e a venda usa o preço de compra como custo
+  function vender(c){
+    var txt = prompt('Vendi «' + (c.nome || 'sem nome') + '» por (€):');
+    if(txt === null) return;
+    var v = parseFloat(String(txt).replace(',', '.'));
+    if(!(v >= 0)){ return; }
+    var venda = { id: novoId(), nome: c.nome, valor: v, custo: c.valor, data: hojeISO(), compraId: c.id };
+    d.vendas.push(venda);
+    c.vendaId = venda.id;
+    ano = hoje.getFullYear(); mes = hoje.getMonth();
+    alterado();
   }
   function adicionar(tipo, nomeId, valorId, dataId, custoId){
     var v = parseFloat($(valorId).value);
