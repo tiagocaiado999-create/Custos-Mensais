@@ -15,7 +15,7 @@ test.beforeEach(() => { novoRedis(); });
 // ---------- palavra-passe ----------
 
 test('sem sessão, todas as funções de dados respondem 401 e não tocam nos dados', async () => {
-  for (const nome of ['data', 'carro', 'negocio', 'faturas', 'estado', 'backups', 'preco']) {
+  for (const nome of ['data', 'carro', 'negocio', 'negocio-fafe', 'faturas', 'estado', 'backups', 'preco']) {
     const r = await chamar(nome, 'GET');
     assert.equal(r.codigo, 401, nome);
   }

@@ -6,6 +6,7 @@
   var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
   var versao = 0, d = padrao(), guardarTimer = null, aGuardar = false, sujo = false;
+  var auto = { compras:[], vendas:[] };      // vêm do FafeBuilds (só leitura, não ficam guardadas aqui)
   var dadosMain = null;                       // dados principais (só leitura), para o saldo do mês
   var hoje = new Date(), ano = hoje.getFullYear(), mes = hoje.getMonth();
 
@@ -31,7 +32,7 @@
     var dd = document.createElement('div'); dd.className = 'd';
     var nome = document.createElement('div'); nome.textContent = x.nome || '(sem nome)';
     var m = document.createElement('div'); m.className = 'm';
-    m.textContent = fmtData(x.data) + (tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId ? ' · vendida' : ''));
+    m.textContent = fmtData(x.data) + (tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId || x.vendida ? ' · vendida' : '')) + (x.auto ? ' · FafeBuilds' : '');
     dd.appendChild(nome); dd.appendChild(m);
     var v = document.createElement('div'); v.className = 'v ' + (tipo === 'vendas' ? 'verde' : 'verm');
     v.textContent = (tipo === 'vendas' ? '+' : '−') + euros(x.valor);
@@ -43,6 +44,7 @@
       alterado();
     });
     el.appendChild(dd); el.appendChild(v);
+    if(x.auto) return el;
     if(tipo === 'compras' && !x.vendaId){
       var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'vender'; vb.textContent = 'Vender';
       vb.addEventListener('click', function(){ vender(x); });
@@ -59,7 +61,7 @@
 
   function render(){
     $('mesLabel').textContent = MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1) + ' ' + ano;
-    var compras = doMes(d.compras), vendas = doMes(d.vendas);
+    var compras = doMes(d.compras.concat(auto.compras)), vendas = doMes(d.vendas.concat(auto.vendas));
     var tc = soma(compras, function(x){ return x.valor; }), tv = soma(vendas, function(x){ return x.valor; });
     var lucro = soma(vendas, function(x){ return x.valor - (x.custo || 0); });
     var base = saldoBase(), final = r2(base - tc + tv);
@@ -111,6 +113,13 @@
       aplicarServidor(j.dados);
       estado(j.dados ? 'Guardado' : 'Ainda sem registos');
     }catch(e){ estado('Não foi possível ler os dados (' + (e.message || e) + '). Não alteres nada até voltar a ligação.', true); }
+    try{
+      var rf = await fetch('/api/negocio-fafe', { cache:'no-store' });
+      var jf = await rf.json();
+      if(jf.erro) estado('Não consegui ler o FafeBuilds (' + jf.erro + '). Só vês os registos feitos aqui.', true);
+      auto.compras = (jf.compras || []).map(function(x){ x.auto = true; return x; });
+      auto.vendas = (jf.vendas || []).map(function(x){ x.auto = true; return x; });
+    }catch(e){}
     try{
       var r2d = await fetch('/api/data?modo=v2', { cache:'no-store' });
       if(r2d.ok) dadosMain = (await r2d.json()).dados;
