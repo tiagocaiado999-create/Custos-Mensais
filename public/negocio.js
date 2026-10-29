@@ -59,6 +59,20 @@
     itens.slice().sort(function(a, b){ return (b.data || '') < (a.data || '') ? -1 : 1; }).forEach(function(x){ box.appendChild(linha(x, tipo)); });
   }
 
+  // Lucro de cada mês do ano que se está a ver (peças vendidas + PCs) e o acumulado
+  function renderAno(){
+    var vendas = d.vendas.concat(auto.vendas), pcs = auto.pcs, acum = 0, h = '<tr><th>Mês</th><th>Lucro</th><th>Acumulado</th></tr>';
+    for(var m = 0; m < 12; m++){
+      var k = ano + '-' + pad(m + 1);
+      var noMes = function(x){ return (x.data || '').slice(0, 7) === k; };
+      var l = r2(soma(vendas.filter(noMes), function(x){ return x.valor - (x.custo || 0); }) + soma(pcs.filter(noMes), function(x){ return x.valor - (x.custo || 0); }));
+      acum = r2(acum + l);
+      h += '<tr><td>' + MESES[m].charAt(0).toUpperCase() + MESES[m].slice(1) + '</td><td class="' + (l < 0 ? 'verm' : l > 0 ? 'verde' : '') + '">' + (l ? euros(l) : '—') + '</td><td>' + euros(acum) + '</td></tr>';
+    }
+    $('anoTitulo').textContent = 'Lucro em ' + ano + ': ' + euros(acum);
+    $('tabAno').innerHTML = h;
+  }
+
   function render(){
     $('mesLabel').textContent = MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1) + ' ' + ano;
     var compras = doMes(d.compras.concat(auto.compras)), vendas = doMes(d.vendas.concat(auto.vendas));
@@ -76,6 +90,7 @@
     $('rLucro').className = 'v ' + (lucro < 0 ? 'verm' : 'verde');
     lista('listaCompras', compras, 'compras');
     lista('listaVendas', vendas, 'vendas');
+    renderAno();
     $('cardPcs').hidden = !auto.pcs.length; lista('listaPcs', pcs, 'pcs');
     var k = auto.stock; $('cardStock').hidden = !k;
     if(k){
