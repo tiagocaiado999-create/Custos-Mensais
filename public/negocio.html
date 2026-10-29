@@ -25,9 +25,21 @@
     <div class="num"><div class="r">Peças compradas</div><div class="v verm" id="rCompras">—</div></div>
     <div class="num"><div class="r">Peças vendidas</div><div class="v verde" id="rVendas">—</div></div>
     <div class="num"><div class="r">Saldo com o negócio</div><div class="v" id="rFinal">—</div></div>
-    <div class="num grande"><div class="r">Lucro das peças vendidas</div><div class="v" id="rLucro">—</div></div>
+    <div class="num"><div class="r">PCs vendidos (lucro)</div><div class="v verde" id="rPcs">—</div></div>
+    <div class="num"><div class="r">Lucro do mês</div><div class="v" id="rLucro">—</div></div>
   </div>
-  <div class="nota">Lucro = o que vendeste − o que pagaste por cada peça vendida (campo «Paguei» ao registar a venda).</div>
+  <div class="nota">Lucro = peças vendidas (o que vendeste − o que pagaste) + lucro dos PCs vendidos. No saldo, um PC conta só pelo lucro, porque o custo das peças já está nele.</div>
+</section>
+
+<section class="card" id="cardStock" hidden>
+  <h2>Stock por vender</h2>
+  <div class="grelha">
+    <div class="num"><div class="r">Peças em stock</div><div class="v" id="sCount">—</div></div>
+    <div class="num"><div class="r">Dinheiro parado</div><div class="v verm" id="sCusto">—</div></div>
+    <div class="num"><div class="r">Venda prevista</div><div class="v" id="sVenda">—</div></div>
+    <div class="num"><div class="r">Lucro previsto</div><div class="v verde" id="sLucro">—</div></div>
+  </div>
+  <div class="nota" id="sParado"></div>
 </section>
 
 <section class="card">
@@ -40,6 +52,12 @@
     <div><label for="cData">Data</label><input type="date" id="cData"></div>
     <button type="button" id="cAdd" class="grande">Adicionar compra</button>
   </div>
+</section>
+
+<section class="card" id="cardPcs" hidden>
+  <h2>PCs vendidos</h2>
+  <p>Vêm do FafeBuilds (pedidos respondidos). Entram no saldo pelo lucro.</p>
+  <div id="listaPcs"></div>
 </section>
 
 <section class="card">

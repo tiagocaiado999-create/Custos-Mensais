@@ -6,7 +6,7 @@
   var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
   var versao = 0, d = padrao(), guardarTimer = null, aGuardar = false, sujo = false;
-  var auto = { compras:[], vendas:[] };      // vêm do FafeBuilds (só leitura, não ficam guardadas aqui)
+  var auto = { compras:[], vendas:[], pcs:[], stock:null };      // vêm do FafeBuilds (só leitura, não ficam guardadas aqui)
   var dadosMain = null;                       // dados principais (só leitura), para o saldo do mês
   var hoje = new Date(), ano = hoje.getFullYear(), mes = hoje.getMonth();
 
@@ -32,10 +32,10 @@
     var dd = document.createElement('div'); dd.className = 'd';
     var nome = document.createElement('div'); nome.textContent = x.nome || '(sem nome)';
     var m = document.createElement('div'); m.className = 'm';
-    m.textContent = fmtData(x.data) + (tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId || x.vendida ? ' · vendida' : '')) + (x.auto ? ' · FafeBuilds' : '');
+    m.textContent = fmtData(x.data) + (tipo === 'pcs' ? ' · vendido por ' + euros(x.valor) + ' · custo ' + euros(x.custo) : tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId || x.vendida ? ' · vendida' : (x.parada ? ' · parada há ' + x.dias + ' dias' : ''))) + (x.auto ? ' · FafeBuilds' : '');
     dd.appendChild(nome); dd.appendChild(m);
-    var v = document.createElement('div'); v.className = 'v ' + (tipo === 'vendas' ? 'verde' : 'verm');
-    v.textContent = (tipo === 'vendas' ? '+' : '−') + euros(x.valor);
+    var v = document.createElement('div'); v.className = 'v ' + (tipo === 'compras' ? 'verm' : 'verde');
+    v.textContent = tipo === 'pcs' ? '+' + euros(x.valor - (x.custo || 0)) : (tipo === 'vendas' ? '+' : '−') + euros(x.valor);
     var b = document.createElement('button'); b.type = 'button'; b.className = 'x'; b.textContent = '×'; b.setAttribute('aria-label', 'Apagar');
     b.addEventListener('click', function(){
       if(!confirm('Apagar «' + (x.nome || 'sem nome') + '»?')) return;
@@ -63,17 +63,25 @@
     $('mesLabel').textContent = MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1) + ' ' + ano;
     var compras = doMes(d.compras.concat(auto.compras)), vendas = doMes(d.vendas.concat(auto.vendas));
     var tc = soma(compras, function(x){ return x.valor; }), tv = soma(vendas, function(x){ return x.valor; });
-    var lucro = soma(vendas, function(x){ return x.valor - (x.custo || 0); });
-    var base = saldoBase(), final = r2(base - tc + tv);
+    var pcs = doMes(auto.pcs), lucroPcs = soma(pcs, function(x){ return x.valor - (x.custo || 0); });
+    var lucro = r2(soma(vendas, function(x){ return x.valor - (x.custo || 0); }) + lucroPcs);
+    var base = saldoBase(), final = r2(base - tc + tv + lucroPcs);
     $('rBase').textContent = euros(base);
     $('rCompras').textContent = euros(tc);
     $('rVendas').textContent = euros(tv);
+    $('rPcs').textContent = euros(lucroPcs);
     $('rFinal').textContent = euros(final);
     $('rFinal').className = 'v ' + (final < 0 ? 'verm' : '');
     $('rLucro').textContent = euros(lucro);
     $('rLucro').className = 'v ' + (lucro < 0 ? 'verm' : 'verde');
     lista('listaCompras', compras, 'compras');
     lista('listaVendas', vendas, 'vendas');
+    $('cardPcs').hidden = !auto.pcs.length; lista('listaPcs', pcs, 'pcs');
+    var k = auto.stock; $('cardStock').hidden = !k;
+    if(k){
+      $('sCount').textContent = k.count; $('sCusto').textContent = euros(k.cost); $('sVenda').textContent = euros(k.sell); $('sLucro').textContent = euros(k.sell - k.cost);
+      $('sParado').textContent = k.staleCount ? k.staleCount + ' peça(s) parada(s) há muito tempo (' + euros(k.staleCost) + ' empatados).' : 'Nenhuma peça parada há muito tempo.';
+    }
   }
 
   // ---------- guardar / carregar ----------
@@ -116,9 +124,11 @@
     try{
       var rf = await fetch('/api/negocio-fafe', { cache:'no-store' });
       var jf = await rf.json();
-      if(jf.erro) estado('Não consegui ler o FafeBuilds (' + jf.erro + '). Só vês os registos feitos aqui.', true);
+      if(jf.erro) estado(jf.desatualizado ? 'FafeBuilds sem resposta (' + jf.erro + '): mostro os dados de ' + new Date(jf.atualizadoEm).toLocaleString('pt-PT') + '.' : 'Não consegui ler o FafeBuilds (' + jf.erro + '). Só vês os registos feitos aqui.', true);
       auto.compras = (jf.compras || []).map(function(x){ x.auto = true; return x; });
       auto.vendas = (jf.vendas || []).map(function(x){ x.auto = true; return x; });
+      auto.pcs = (jf.pcs || []).map(function(x){ x.auto = true; return x; });
+      auto.stock = jf.stock || null;
     }catch(e){}
     try{
       var r2d = await fetch('/api/data?modo=v2', { cache:'no-store' });

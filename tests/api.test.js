@@ -134,6 +134,38 @@ test('negocio: gravar, ler e conflito de versão', async () => {
   assert.equal((await chamar('negocio', 'POST', { body: { versao: 0, dados: {} }, headers: { cookie } })).codigo, 409);
 });
 
+test('negocio-fafe: sem chave fica desligado; com chave usa cache e, se falhar, a cópia antiga', async () => {
+  const cookie = await cookieDeSessao();
+  const redis = novoRedis();
+  delete process.env.FAFEBUILDS_KEY;
+  assert.equal((await chamar('negocio-fafe', 'GET', { headers: { cookie } })).corpo.ligado, false);
+
+  process.env.FAFEBUILDS_KEY = 'chave-de-teste';
+  const original = global.fetch;
+  let pedidos = 0, falhar = false;
+  global.fetch = async (url, opc) => {
+    pedidos++;
+    assert.equal(opc.headers.Authorization, 'Bearer chave-de-teste');
+    if (falhar) return { ok: false, status: 401 };
+    return { ok: true, json: async () => ({ items: [{ id: 'pw-1', name: 'CPU', cost: 100, boughtAt: '2026-10-29', sell: 150, stale: false, days: 1, sold: false, soldPrice: null, soldAt: null }], pcs: [{ id: 'p', title: 'PC', price: 500, cost: 400, soldAt: '2026-10-30' }], stock: { count: 1, cost: 100, sell: 150, staleCount: 0, staleCost: 0 } }) };
+  };
+  try {
+    const um = await chamar('negocio-fafe', 'GET', { headers: { cookie } });
+    assert.equal(um.corpo.compras[0].nome, 'CPU');
+    assert.equal(um.corpo.pcs[0].valor, 500);
+    await chamar('negocio-fafe', 'GET', { headers: { cookie } });
+    assert.equal(pedidos, 1);                       // a segunda leitura veio da cópia de 5 minutos
+    // a cópia fica velha e o FafeBuilds falha: mostra a cópia antiga, marcada como desatualizada
+    const chave = 'custos-mensais-negocio-fafe-cache', c = JSON.parse(await redis.get(chave));
+    await redis.set(chave, JSON.stringify({ em: '2020-01-01T00:00:00.000Z', dados: c.dados }));
+    falhar = true;
+    const velho = await chamar('negocio-fafe', 'GET', { headers: { cookie } });
+    assert.equal(velho.corpo.desatualizado, true);
+    assert.match(velho.corpo.erro, /401/);
+    assert.equal(velho.corpo.compras.length, 1);
+  } finally { global.fetch = original; delete process.env.FAFEBUILDS_KEY; }
+});
+
 // ---------- faturas ----------
 
 test('faturas: guardar com imagem, listar, ler a imagem e apagar', async () => {

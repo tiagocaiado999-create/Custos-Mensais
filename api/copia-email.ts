@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type Redis from 'ioredis';
 import { getCliente } from './_redis';
 import { exigirSessao } from './_sessao';
+import { lerFafe } from './_fafe';
 import { msg } from './_util';
 
 // Envia por email uma cópia completa (mesmo formato da cópia descarregada na página de gestão).
@@ -81,6 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       const segredo = process.env.CRON_SECRET;
       if (!segredo || (req.headers.authorization || '') !== 'Bearer ' + segredo) { res.status(401).json({ erro: 'Não autorizado' }); return; }
+      await lerFafe(redis, true).catch(() => {});   // verifica a ligação ao FafeBuilds (avisa por email se falhar)
     } else if (req.method === 'POST') {
       const ult = await redis.get(CHAVE_ULTIMO_ENVIO);
       let o = null; try { o = ult ? JSON.parse(ult) : null; } catch (e) {}
