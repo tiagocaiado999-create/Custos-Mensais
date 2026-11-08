@@ -65,9 +65,32 @@
   function qaFechar(){ qrParar(); byId('qaOverlay').hidden = true; byId('fabAdd').focus(); }
   byId('fabAdd').addEventListener('click', qaAbrir);
   byId('qaFechar').addEventListener('click', qaFechar);
-  byId('qaGuardar').addEventListener('click', qaGuardar);
+  // qaGuardar só existe em painel-mais.js (carregado depois): passar a função diretamente ligava o próprio botão (id com o mesmo nome) e o clique não fazia nada
+  byId('qaGuardar').addEventListener('click', function(){ qaGuardar(); });
   byId('qaPessoa').addEventListener('change', qaAjustarTipo);
   byId('qaOverlay').addEventListener('click', function(e){ if(e.target === byId('qaOverlay')) qaFechar(); });
   ['qaValor','qaNome'].forEach(function(id){ byId(id).addEventListener('keydown', function(e){ if(e.key === 'Enter') qaGuardar(); }); });
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !byId('qaOverlay').hidden) qaFechar(); });
+  // Escape fecha; Tab fica preso dentro do painel (sem isto o foco ia para a página por trás)
+  document.addEventListener('keydown', function(e){
+    if(byId('qaOverlay').hidden) return;
+    if(e.key === 'Escape'){ qaFechar(); return; }
+    if(e.key !== 'Tab') return;
+    /** @type {any[]} */
+    var itens = Array.prototype.filter.call(byId('qaOverlay').querySelectorAll('button, input, select, a[href], [tabindex="0"]'), function(/** @type {any} */ el){
+      return !el.disabled && el.type !== 'hidden' && el.tabIndex >= 0 && el.getClientRects().length > 0;
+    });
+    if(!itens.length) return;
+    var primeiro = itens[0], ultimo = itens[itens.length - 1], ativo = document.activeElement;
+    if(!byId('qaOverlay').contains(ativo)){ e.preventDefault(); primeiro.focus(); }
+    else if(e.shiftKey && ativo === primeiro){ e.preventDefault(); ultimo.focus(); }
+    else if(!e.shiftKey && ativo === ultimo){ e.preventDefault(); primeiro.focus(); }
+  });
+  // os botões "Foto…" são <label> de um campo escondido: tornar alcançáveis e ativáveis com o teclado
+  Array.prototype.forEach.call(byId('qaOverlay').querySelectorAll('label.qa-foto'), function(/** @type {any} */ lab){
+    var campo = lab.querySelector('input[type=file]');
+    if(!campo) return;
+    lab.tabIndex = 0;
+    lab.setAttribute('role', 'button');
+    lab.addEventListener('keydown', function(/** @type {KeyboardEvent} */ e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); campo.click(); } });
+  });
 

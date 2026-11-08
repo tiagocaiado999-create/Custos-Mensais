@@ -39,13 +39,14 @@
     qaToastTimer = setTimeout(function(){ t.hidden = true; }, 3000);
   }
   function qaGuardar(){
-    var valor = parseFloat(byId('qaValor').value);
-    if(!(valor > 0)){ byId('qaValor').focus(); return; }
+    if(byId('qaOverlay').hidden) return;   // já foi gravado (duplo clique, Enter repetido, toque duplo): não repetir o lançamento
+    var valor = Math.round(parseFloat(byId('qaValor').value) * 100) / 100;
+    if(!(valor >= 0.01 && valor <= 1000000000)){ byId('qaValor').focus(); return; }   // de 1 cêntimo a mil milhões; NaN e Infinity também ficam de fora
     var data = byId('qaData').value || hojeISO();
     var ano = parseInt(data.slice(0, 4), 10), mes = parseInt(data.slice(5, 7), 10) - 1;
     if(isNaN(ano) || isNaN(mes)){ data = hojeISO(); ano = parseInt(data.slice(0, 4), 10); mes = parseInt(data.slice(5, 7), 10) - 1; }
     var pessoa = byId('qaPessoa').value;
-    var nomeTxt = byId('qaNome').value.trim();
+    var nomeTxt = byId('qaNome').value.trim().slice(0, 100);
 
     if(qaNat !== 'gasto'){
       var cfg = LISTAS_MES[qaNat];
@@ -53,7 +54,7 @@
       if(!alvo[cfg.campo]) alvo[cfg.campo] = [];
       alvo[cfg.campo].push({ id: uid(), nome: nomeTxt || cfg.padrao, valor: valor, data: data });
       guardar();
-      byId('qaOverlay').hidden = true;
+      qaFechar();
       renderTudo();
       qaMostrarToast((qaNat === 'investido' ? 'Investimento: ' : 'Poupança: ') + euros(valor) + ' (' + nomesPessoa[pessoa] + ', ' + mesesAbrev[mes] + ')');
       return;
@@ -62,7 +63,7 @@
     var tipo = pessoa === 'casal' ? 'opcional' : byId('qaTipo').value;
     var novo = { id: uid(), nome: nomeTxt || nomeCategoria(qaCat), valor: valor, categoria: qaCat, data: data };
     if(qaFatura) novo.fatura = qaFatura;
-    var nota = byId('qaNota').value.trim();
+    var nota = byId('qaNota').value.trim().slice(0, 300);
     if(qaImagem || qaQrTexto || nota){
       var fid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       novo.anexo = fid;
@@ -81,7 +82,7 @@
     else mesPessoa(pessoa, ano, mes)[tipo].push(novo);
     setCatAberta(tipo, qaCat, true);
     guardar();
-    byId('qaOverlay').hidden = true;
+    qaFechar();
     renderTudo();
     qaMostrarToast('Adicionado: ' + nomeCategoria(qaCat) + ' · ' + euros(valor) + ' (' + nomesPessoa[pessoa] + ', ' + mesesAbrev[mes] + ')');
   }

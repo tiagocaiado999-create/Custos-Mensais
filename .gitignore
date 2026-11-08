@@ -18,3 +18,7 @@ privado/
 
 # Saída da compilação dos testes (npm test)
 .teste-build/
+
+# Testes de browser (Playwright)
+test-results/
+playwright-report/

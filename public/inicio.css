@@ -1,0 +1,120 @@
+/* Início e navegação (index.html): mosaico por valor, barra de baixo e cartões arredondados, na cor de destaque da app. */
+:root{ --radius:24px }
+body{max-width:560px;padding-top:16px;padding-bottom:120px}
+h1{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:1.15rem;letter-spacing:-.02em;min-width:0}
+.topo{gap:8px}
+.topo-links a,.btn-tema,.btn-cor,.btn-instalar{padding:0 5px}
+.tabs[hidden]{display:none}
+
+/* ---------- barra de navegação flutuante ---------- */
+.barra{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:25;display:flex;gap:2px;width:calc(100% - 24px);max-width:520px;padding:6px;border-radius:999px;background:rgba(22,26,24,.78);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.barra a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;border-radius:999px;color:rgba(255,255,255,.62);text-decoration:none;font-size:.6rem;font-weight:500;letter-spacing:.01em}
+.barra svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.barra a.ativo{background:rgba(255,255,255,.16);color:#fff}
+.barra a:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+.fab{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+.qa-toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+
+/* ---------- detalhe (secções) ---------- */
+.detalhe-topo{display:none;align-items:center;gap:12px;margin-bottom:10px}
+.detalhe-topo .voltar{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:var(--fg);color:var(--bg);font-weight:500;font-size:.9rem;text-decoration:none}
+.detalhe-topo span{font-size:1.15rem;font-weight:600;letter-spacing:-.01em}
+body.detalhe .detalhe-topo{display:flex}
+body.detalhe .resumo,body.detalhe .mosaico,body.detalhe .barra-home{display:none}
+body.detalhe .nav{border:none;background:transparent;padding:0;margin-bottom:10px}
+body.detalhe .nav button{background:var(--surface);border-radius:50%;min-width:44px;min-height:44px;padding:0}
+body.detalhe .nav .mes-atual{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:1.05rem}
+.extrato,.grafico-box,.historico,.salario-box,.resumo-frases,.exportar-box{border:none;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.invest-resumo .tile{background:var(--surface);color:var(--fg);border:none;border-radius:var(--radius);padding:14px 16px;min-height:84px;display:flex;flex-direction:column;justify-content:space-between}
+.invest-resumo .tile .val{font-family:'Inter',system-ui,sans-serif;font-weight:500;font-size:1.15rem}
+
+/* ---------- início ---------- */
+body.home .exportar-box,
+body.home #viewExtrato,body.home #viewGrafico,body.home #viewInvestimentos,body.home #viewPesquisar,body.home #viewFaturas{display:none !important}
+html:has(body.home){background:#07110d}
+body.home{color:#fff;background:transparent}
+/* fundo em movimento */
+body.home::before{content:'';position:fixed;inset:-35%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(circle at 22% 20%, #1c9a52 0, transparent 38%),
+    radial-gradient(circle at 78% 28%, #a9800f 0, transparent 36%),
+    radial-gradient(circle at 30% 78%, #17695a 0, transparent 40%),
+    radial-gradient(circle at 80% 85%, #2a4fb0 0, transparent 30%),
+    #07110d;
+  animation:fluir 22s ease-in-out infinite alternate}
+@keyframes fluir{0%{transform:rotate(0) scale(1)}50%{transform:rotate(28deg) scale(1.12)}100%{transform:rotate(-18deg) scale(1.04)}}
+body.home .topo h1{color:#fff}
+body.home .topo-links a,body.home .btn-tema,body.home .btn-cor,body.home .btn-instalar{color:rgba(255,255,255,.72)}
+body.home .nav{border:none;background:transparent;padding:0;margin-bottom:0}
+body.home .nav .mes-atual{color:rgba(255,255,255,.85);font-family:'Inter',system-ui,sans-serif;font-weight:500;font-size:.95rem}
+body.home .nav button{background:rgba(255,255,255,.12);color:#fff;border-radius:50%;min-width:40px;min-height:40px;padding:0}
+body.home footer{color:rgba(255,255,255,.5)}
+
+.barra-home{display:none;margin:6px 0 0}
+body.home .barra-home{display:flex}
+.barra-home button{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.barra-home svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* número grande ao centro */
+.resumo{display:block;margin:0}
+body.home .resumo .tile:not(.saldo){display:none}
+.resumo .tile.saldo{background:none;border:none;box-shadow:none;color:#fff;text-align:center;align-items:center;justify-content:center;padding:6px 0 22px;min-height:0}
+.resumo .tile.saldo .label{color:rgba(255,255,255,.75);opacity:1;text-transform:none;letter-spacing:0;font-size:.9rem}
+.resumo .tile.saldo .val,.resumo .tile.saldo .val.positivo,.resumo .tile.saldo .val.negativo{font-family:'Inter',system-ui,sans-serif;font-weight:300;font-size:3.6rem;letter-spacing:-.04em;line-height:1.05;margin:2px 0;color:#fff}
+.resumo .tile.saldo .val.negativo{color:#ffb4a4}
+.resumo .tile.saldo .sub{color:rgba(255,255,255,.65);opacity:1;font-size:.78rem}
+
+/* mosaico em vidro, tamanho proporcional ao valor */
+.mosaico{position:relative;height:340px;margin:0 0 8px}
+.mo{position:absolute;box-sizing:border-box;padding:10px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;overflow:hidden;text-decoration:none;color:#fff;
+  background:linear-gradient(160deg,rgba(var(--c),.62),rgba(var(--c),.34));-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 18px rgba(0,0,0,.18);transition:transform .12s;background-clip:padding-box}
+.mo:active{transform:scale(.97)}
+.mo svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.mo span{font-size:.8rem;opacity:.85}
+.mo b{font-weight:300;font-size:1.5rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mo.peq svg{display:none}
+.mo.peq b{font-size:1.05rem}
+.m1{--c:176,132,16}
+.m2{--c:44,92,210}
+.m3{--c:30,140,120}
+.m4{--c:40,200,100}
+.m5{--c:200,190,170}
+.mosaico-vazio{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:.9rem}
+body.oculto .mo b,body.oculto .resumo .tile.saldo .val,body.oculto .resumo .tile.saldo .sub{filter:blur(10px)}
+@media (prefers-reduced-motion: reduce){ body.home::before{animation:none} .mo{transition:none} }
+
+/* ---------- paleta terracota (fundo claro, uma só cor de destaque) ---------- */
+html:has(body.home){background:var(--bg)}
+body.home{color:var(--fg)}
+body.home::before{display:none}
+body.home .topo h1{color:var(--fg)}
+body.home .topo-links a,body.home .btn-tema,body.home .btn-cor,body.home .btn-instalar{color:var(--muted)}
+body.home .nav .mes-atual{color:var(--fg);font-weight:600}
+body.home .nav button{background:var(--surface);color:var(--fg)}
+body.home footer{color:var(--muted)}
+.barra-home button{background:var(--surface);border:1px solid var(--border);color:var(--fg);-webkit-backdrop-filter:none;backdrop-filter:none}
+
+.resumo .tile.saldo{background:var(--accent);color:var(--accent-fg);border-radius:var(--radius);padding:22px 16px;margin-bottom:8px}
+.resumo .tile.saldo .label,.resumo .tile.saldo .sub{color:var(--accent-fg);opacity:.8}
+.resumo .tile.saldo .val,.resumo .tile.saldo .val.positivo,.resumo .tile.saldo .val.negativo{color:var(--accent-fg);font-weight:500;font-size:3rem}
+
+.mo{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;border:none;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.mo b{font-weight:500}
+.mo span{opacity:.8}
+.m1{background:var(--accent);color:var(--accent-fg)}
+.m2{background:color-mix(in srgb, var(--accent) 62%, var(--surface));color:var(--accent-fg)}
+.m3{background:color-mix(in srgb, var(--accent) 34%, var(--surface));color:var(--fg)}
+.m4{background:color-mix(in srgb, var(--accent) 18%, var(--surface));color:var(--fg)}
+.m5{background:var(--surface);color:var(--fg)}
+.mosaico-vazio{color:var(--muted)}
+
+.barra{background:var(--surface);border:1px solid var(--border);box-shadow:0 6px 22px rgba(0,0,0,.12);-webkit-backdrop-filter:none;backdrop-filter:none}
+.barra a{color:var(--muted)}
+.barra a.ativo{background:color-mix(in srgb, var(--accent) 14%, var(--surface));color:var(--accent)}
+.barra a:focus-visible{outline-color:var(--accent)}
+
+/* cartões muito pequenos (ex.: Casal): valor mais pequeno e menos margem */
+.mo.peq{padding:8px 4px}
+.mo.peq b{font-size:.92rem}
+.mo.peq span{font-size:.72rem}
