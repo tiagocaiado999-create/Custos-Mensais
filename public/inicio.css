@@ -118,3 +118,8 @@ body.home footer{color:var(--muted)}
 .mo.peq{padding:8px 4px}
 .mo.peq b{font-size:.92rem}
 .mo.peq span{font-size:.72rem}
+
+/* mosaico: o texto encolhe com a largura do cartão (nunca fica cortado) */
+.mo{container-type:inline-size;padding:8px 4px}
+.mo b,.mo.peq b{font-size:clamp(.7rem,14cqw,1.5rem)}
+.mo span,.mo.peq span{font-size:clamp(.66rem,10cqw,.8rem)}

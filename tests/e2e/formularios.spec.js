@@ -202,3 +202,35 @@ test.describe('Painel + (adicionar gasto)', () => {
     expect((await focoEm(page)).id).toBe('fabAdd');
   });
 });
+
+// =====================================================================================
+test.describe('Mosaico do início', () => {
+  // cenários: o da captura do telemóvel (poupança e investido a 0 €, sobra negativa), tudo a zero, e valores muito diferentes
+  const cenarios = {
+    'valores da captura (2 cartões a 0 €, sobra negativa)': { sal: 855, fixo: 154.75, opc: 732.35, poup: 0, inv: 0 },
+    'tudo a 0 €': { sal: 0, fixo: 0, opc: 0, poup: 0, inv: 0 },
+    'valores muito diferentes': { sal: 1800, fixo: 5, opc: 3000, poup: 0.5, inv: 12345.67 }
+  };
+  for (const [nome, c] of Object.entries(cenarios)) {
+    test('mostra sempre os 5 cartões, com o valor inteiro visível: ' + nome, async ({ page, request }) => {
+      await reiniciar(request, true);
+      await abrirApp(page);
+      const cartoes = await page.evaluate((c) => {
+        const it = (v) => (v > 0 ? [{ id: 'x' + v, nome: 'x', valor: v, categoria: 'outros', data: hojeISO() }] : []);
+        dados.tiago[chave(anoAtual, mesAtual)] = { salario: c.sal, extras: [], fixo: it(c.fixo), opcional: it(c.opc), poupanca: it(c.poup), investido: it(c.inv) };
+        renderTudo();
+        return [...document.querySelectorAll('.mo')].map((a) => {
+          const t = a.getBoundingClientRect(), b = a.querySelector('b'), r = b.getBoundingClientRect();
+          return { nome: a.querySelector('span').textContent, valor: b.textContent, larg: Math.round(t.width), alt: Math.round(t.height), cortado: r.left < t.left - 0.5 || r.right > t.right + 0.5 || b.scrollWidth > b.clientWidth + 1 };
+        });
+      }, c);
+      expect(cartoes.map((x) => x.nome).sort()).toEqual(['Fixos', 'Investido', 'Opcionais', 'Poupança', 'Sobra']);
+      for (const x of cartoes) {
+        expect(x.cortado, 'valor cortado em ' + x.nome + ' (' + x.valor + ')').toBe(false);
+        expect(x.larg, 'cartão ' + x.nome + ' demasiado estreito').toBeGreaterThanOrEqual(85);
+        expect(x.alt, 'cartão ' + x.nome + ' demasiado baixo').toBeGreaterThanOrEqual(90);
+      }
+      if (c.poup === 0) expect(cartoes.find((x) => x.nome === 'Poupança').valor).toMatch(/^0,00/);
+    });
+  }
+});

@@ -4,19 +4,12 @@
 (function(){
   var TITULOS = { extrato: 'Extrato', grafico: 'Gráfico', investimentos: 'Investimentos', pesquisar: 'Pesquisar', faturas: 'Faturas' };
 
-  // ---------- Mosaico: cada cartão ocupa uma área proporcional ao valor ----------
-  // divide a lista em dois grupos de soma parecida, alternando o corte vertical/horizontal
-  function dispor(itens, x, y, w, h, saida){
-    if(itens.length === 1){ saida.push({ it: itens[0], x: x, y: y, w: w, h: h }); return; }
-    var total = itens.reduce(function(s, i){ return s + i.v; }, 0), acum = 0, corte = 1;
-    for(var k = 0; k < itens.length - 1; k++){
-      acum += itens[k].v; corte = k + 1;
-      if(acum >= total / 2) break;
-    }
-    var a = itens.slice(0, corte), b = itens.slice(corte);
-    var fa = a.reduce(function(s, i){ return s + i.v; }, 0) / total;
-    if(w >= h){ dispor(a, x, y, w * fa, h, saida); dispor(b, x + w * fa, y, w * (1 - fa), h, saida); }
-    else { dispor(a, x, y, w, h * fa, saida); dispor(b, x, y + h * fa, w, h * (1 - fa), saida); }
+  // ---------- Mosaico: sempre os 5 cartões (mesmo a 0 €); a área segue o valor, com um mínimo para o texto caber ----------
+  // Duas filas: os 2 maiores em cima e os outros 3 em baixo. Cada cartão tem uma largura mínima; o resto reparte-se pelo valor.
+  function larguras(itens, minimo){
+    var soma = itens.reduce(function(s, i){ return s + i.v; }, 0);
+    var resto = 1 - itens.length * minimo;
+    return itens.map(function(i){ return minimo + resto * (soma > 0 ? i.v / soma : 1 / itens.length); });
   }
 
   function desenharMosaico(){
@@ -31,27 +24,28 @@
       { nome: 'Poupança', val: poup, cls: 'm3', ic: 'M12 3v18M16 7h-5a3 3 0 0 0 0 6h2a3 3 0 0 1 0 6H7' },
       { nome: 'Investido', val: inv, cls: 'm4', ic: 'M3 17l6-6 4 4 8-8M15 7h6v6' },
       { nome: 'Sobra', val: sobra, cls: 'm5', ic: 'M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l2-3h12M16 14h2' }
-    ].filter(function(i){ return i.val > 0; });
-    cont.textContent = '';
-    if(!itens.length){
-      var vazio = document.createElement('div');
-      vazio.className = 'mosaico-vazio';
-      vazio.textContent = 'Ainda sem lançamentos neste mês.';
-      cont.appendChild(vazio);
-      return;
-    }
-    var soma = itens.reduce(function(s, i){ return s + i.val; }, 0);
-    itens.forEach(function(i){ i.v = Math.max(i.val, soma * 0.08); });   // os valores pequenos continuam a ter um cartão tocável
-    itens.sort(function(a, b){ return b.v - a.v; });
+    ];
+    itens.forEach(function(i, k){ i.ordem = k; i.v = Math.max(i.val, 0); });   // a Sobra negativa tem o tamanho mínimo, mas mostra o valor
+    var porValor = itens.slice().sort(function(a, b){ return b.v - a.v || a.ordem - b.ordem; });
+    var cima = porValor.slice(0, 2), baixo = porValor.slice(2);
+    var somaCima = cima.reduce(function(s, i){ return s + i.v; }, 0), total = itens.reduce(function(s, i){ return s + i.v; }, 0);
+    var hCima = total > 0 ? Math.min(0.62, Math.max(0.38, somaCima / total)) : 0.5;
     var caixas = [];
-    dispor(itens, 0, 0, 100, 100, caixas);
+    [[cima, 0, hCima, 0.3], [baixo, hCima, 1 - hCima, 0.26]].forEach(function(fila){
+      var x = 0;
+      larguras(fila[0], fila[3]).forEach(function(w, k){
+        caixas.push({ it: fila[0][k], x: x * 100, y: fila[1] * 100, w: w * 100, h: fila[2] * 100 });
+        x += w;
+      });
+    });
+    cont.textContent = '';
     caixas.forEach(function(c){
       var a = document.createElement('a');
       a.href = '#extrato';
       a.className = 'mo ' + c.it.cls;
       a.style.left = 'calc(' + c.x + '% + 3px)'; a.style.top = 'calc(' + c.y + '% + 3px)';
       a.style.width = 'calc(' + c.w + '% - 6px)'; a.style.height = 'calc(' + c.h + '% - 6px)';
-      if(c.w * c.h < 1100) a.className += ' peq';   // cartões pequenos: sem ícone
+      if(c.w * c.h < 800) a.className += ' peq';   // cartões pequenos: sem ícone
       a.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + c.it.ic + '"/></svg>';   // ícone fixo do código, sem texto do utilizador
       var n = document.createElement('span'); n.textContent = c.it.nome;
       var val = document.createElement('b'); val.textContent = euros(c.it.val);
