@@ -79,9 +79,23 @@
     }
     var texto = semAcentos(byId('pesqTexto').value.trim());
     var cat = selCat.value, per = byId('pesqPeriodo').value;
+    // pesquisa avançada: intervalo de datas (inclusivo) e de valores (inclusivo); com datas escolhidas o período acima deixa de contar
+    var de = byId('pesqDe').value, ate = byId('pesqAte').value;
+    if(de && ate && de > ate){ var tmp = de; de = ate; ate = tmp; }   // datas trocadas: corrige sozinho
+    var minTxt = byId('pesqMin').value, maxTxt = byId('pesqMax').value;
+    var vMin = minTxt === '' ? null : parseFloat(minTxt), vMax = maxTxt === '' ? null : parseFloat(maxTxt);
+    if(vMin !== null && vMax !== null && vMin > vMax){ var t2 = vMin; vMin = vMax; vMax = t2; }
     var lista = todosLancamentos(pessoaAtual).filter(function(i){
-      if(per === 'ano' && i.ano !== anoAtual) return false;
-      if(per === 'mes' && (i.ano !== anoAtual || i.mes !== mesAtual)) return false;
+      if(de || ate){
+        var d = i.data || (i.ano + '-' + String(i.mes + 1).padStart(2, '0') + '-01');   // sem data: conta como dia 1 do mês
+        if(de && d < de) return false;
+        if(ate && d > ate) return false;
+      } else {
+        if(per === 'ano' && i.ano !== anoAtual) return false;
+        if(per === 'mes' && (i.ano !== anoAtual || i.mes !== mesAtual)) return false;
+      }
+      if(vMin !== null && !isNaN(vMin) && i.valor < vMin - 0.0001) return false;
+      if(vMax !== null && !isNaN(vMax) && i.valor > vMax + 0.0001) return false;
       if(cat !== 'todas' && i.categoria !== cat) return false;
       return !texto || semAcentos(i.nome).indexOf(texto) !== -1;
     });
@@ -127,7 +141,11 @@
       cont.appendChild(mais);
     }
   }
-  ['pesqTexto','pesqCat','pesqPeriodo'].forEach(function(id){
-    byId(id).addEventListener(id === 'pesqTexto' ? 'input' : 'change', renderPesquisa);
+  ['pesqTexto','pesqCat','pesqPeriodo','pesqDe','pesqAte','pesqMin','pesqMax'].forEach(function(id){
+    byId(id).addEventListener(id === 'pesqTexto' || id === 'pesqMin' || id === 'pesqMax' ? 'input' : 'change', renderPesquisa);
+  });
+  byId('pesqLimpar').addEventListener('click', function(){
+    ['pesqDe','pesqAte','pesqMin','pesqMax'].forEach(function(id){ byId(id).value = ''; });
+    renderPesquisa();
   });
 

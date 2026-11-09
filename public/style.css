@@ -284,3 +284,9 @@ input[type=number], input[type=text], select{font-size:16px}
 .ic-cat{display:inline-block;flex:none;font-size:1.15rem;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .qa-cats button{display:inline-flex;align-items:center;gap:6px}
 .qa-cats .ic-cat{font-size:1rem}
+
+/* pesquisa avançada: intervalo de datas e de valores */
+.pesq-avanc{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px;border-bottom:1px solid var(--border)}
+.pesq-avanc label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pesq-avanc input{min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;font-size:.85rem;text-transform:none;letter-spacing:0;font-weight:400}
+.pesq-avanc button{grid-column:1/-1;padding:8px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:.82rem;cursor:pointer}

@@ -166,6 +166,13 @@
       <select id="pesqCat"><option value="todas">Todas as categorias</option></select>
       <select id="pesqPeriodo"><option value="ano">Ano mostrado</option><option value="mes">Mês mostrado</option><option value="tudo">Sempre</option></select>
     </div>
+    <div class="pesq-avanc">
+      <label>De <input type="date" id="pesqDe" aria-label="Data de início"></label>
+      <label>Até <input type="date" id="pesqAte" aria-label="Data de fim"></label>
+      <label>Valor de <input type="number" id="pesqMin" inputmode="decimal" min="0" step="0.01" placeholder="€ mín." aria-label="Valor mínimo"></label>
+      <label>até <input type="number" id="pesqMax" inputmode="decimal" min="0" step="0.01" placeholder="€ máx." aria-label="Valor máximo"></label>
+      <button type="button" id="pesqLimpar">Limpar datas e valores</button>
+    </div>
     <div class="pesq-resumo" id="pesqResumo"></div>
     <div id="pesqLista"></div>
     <div class="add-row"><button id="pesqExportar" type="button">Exportar resultados (Excel)</button></div>
