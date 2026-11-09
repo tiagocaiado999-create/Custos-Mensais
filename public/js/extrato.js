@@ -79,6 +79,14 @@
     renderTudo();
   }
 
+  // Extrato: um só seletor "Organizar": recente (predefinido), antigo, caro (valor mais alto) ou barato (valor mais baixo). Não se guarda.
+  var extratoOrdem = 'recente';
+  var selOrdem = /** @type {HTMLSelectElement | null} */ (document.getElementById('extratoOrdem'));
+  if(selOrdem){
+    selOrdem.value = extratoOrdem;
+    selOrdem.addEventListener('change', function(){ var o = selOrdem.value; extratoOrdem = o === 'antigo' || o === 'caro' || o === 'barato' ? o : 'recente'; renderTudo(); });
+  }
+
   function renderSecao(containerId, chaveTipo, titulo, tipoClasse){
     var container = document.getElementById(containerId);
     container.innerHTML = '';
@@ -248,40 +256,16 @@
       return row;
     }
 
-    // agrupa por categoria; cada grupo abre/fecha com a seta
-    CATEGORIAS.forEach(function(cat){
-      var itensCat = lista.filter(function(i){ return (i.categoria || 'outros') === cat.id; });
-      if(itensCat.length === 0) return;
-      var aberta = catAberta(chaveTipo, cat.id);
-
-      var grupo = document.createElement('div');
-      grupo.className = 'cat-grupo';
-
-      var cabeca = document.createElement('button');
-      cabeca.type = 'button';
-      cabeca.className = 'cat-head';
-      cabeca.setAttribute('aria-expanded', aberta ? 'true' : 'false');
-      cabeca.innerHTML = '<span class="seta" aria-hidden="true">▸</span>' +
-        '<span class="cat-nome">' + cat.nome + '</span>' +
-        '<span class="cat-qtd">' + itensCat.length + (itensCat.length === 1 ? ' lançamento' : ' lançamentos') + '</span>' +
-        '<span class="cat-total">' + euros(somaLista(itensCat)) + '</span>';
-
-      var corpo = document.createElement('div');
-      corpo.className = 'cat-corpo';
-      corpo.hidden = !aberta;
-      itensCat.forEach(function(item){ corpo.appendChild(criarLinha(item)); });
-
-      cabeca.addEventListener('click', function(){
-        var abrir = corpo.hidden;
-        corpo.hidden = !abrir;
-        cabeca.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-        setCatAberta(chaveTipo, cat.id, abrir);
-      });
-
-      grupo.appendChild(cabeca);
-      grupo.appendChild(corpo);
-      box.appendChild(grupo);
+    // ordena pela opção escolhida; em empate de valor, o mais recente primeiro
+    var seq = lista.map(function(i, k){ return { i: i, k: k }; });
+    seq.sort(function(a, b){
+      var c = (a.i.data || '').localeCompare(b.i.data || '') || a.k - b.k;   // do mais antigo para o mais recente
+      var porData = extratoOrdem === 'antigo' ? c : -c;
+      if(extratoOrdem !== 'caro' && extratoOrdem !== 'barato') return porData;
+      var v = (a.i.valor || 0) - (b.i.valor || 0);
+      return (extratoOrdem === 'barato' ? v : -v) || -c;
     });
+    seq.forEach(function(x){ box.appendChild(criarLinha(x.i)); });
 
     if(!casalFixoReadonly){
       var addRow = document.createElement('div');

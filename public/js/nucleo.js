@@ -20,6 +20,7 @@
     { id:'transporte', nome:'Transporte' },
     { id:'saude', nome:'Saúde' },
     { id:'compras', nome:'Compras' },
+    { id:'prendas', nome:'Prendas' },
     { id:'outros', nome:'Outros' }
   ];
   function nomeCategoria(id){
