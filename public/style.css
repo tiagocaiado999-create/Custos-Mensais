@@ -279,3 +279,8 @@ footer{margin-top:24px;text-align:center;color:var(--muted);font-size:.78rem}
 /* previne zoom automático do iOS ao focar campos (exige font-size >=16px) */
 input[type=number], input[type=text], select{font-size:16px}
 .salario-box input[type=number]{font-size:1.05rem}
+
+/* ícones (emoji) das categorias */
+.ic-cat{display:inline-block;flex:none;font-size:1.15rem;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.qa-cats button{display:inline-flex;align-items:center;gap:6px}
+.qa-cats .ic-cat{font-size:1rem}

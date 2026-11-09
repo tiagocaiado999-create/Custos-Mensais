@@ -23,6 +23,11 @@
     { id:'prendas', nome:'Prendas' },
     { id:'outros', nome:'Outros' }
   ];
+  // Ícone (emoji) de cada categoria. Texto fixo do código, sem texto do utilizador: seguro para innerHTML.
+  var ICONES_CAT = { comida: '🍴', restaurante: '🍔', lazer: '🎟️', transporte: '🚗', saude: '❤️', compras: '🛍️', prendas: '🎁', outros: '📦' };
+  function iconeCategoria(id){
+    return '<span class="ic-cat" aria-hidden="true">' + (ICONES_CAT[id] || ICONES_CAT.outros) + '</span>';
+  }
   function nomeCategoria(id){
     var c = CATEGORIAS.filter(function(c){ return c.id === id; })[0];
     return c ? c.nome : 'Outros';

@@ -282,7 +282,7 @@
       cabeca.className = 'cat-head';
       cabeca.setAttribute('aria-expanded', aberta ? 'true' : 'false');
       cabeca.innerHTML = '<span class="seta" aria-hidden="true">▸</span>' +
-        '<span class="cat-nome">' + cat.nome + '</span>' +
+        iconeCategoria(cat.id) + '<span class="cat-nome">' + cat.nome + '</span>' +
         '<span class="cat-qtd">' + itensCat.length + (itensCat.length === 1 ? ' lançamento' : ' lançamentos') + '</span>' +
         '<span class="cat-total">' + euros(somaLista(itensCat)) + '</span>';
 

@@ -6,7 +6,9 @@
     w.innerHTML = '';
     CATEGORIAS.forEach(function(c){
       var b = document.createElement('button');
-      b.type = 'button'; b.textContent = c.nome; b.className = c.id === qaCat ? 'ativo' : '';
+      b.type = 'button'; b.className = c.id === qaCat ? 'ativo' : '';
+      b.innerHTML = iconeCategoria(c.id);   // SVG fixo do código
+      b.appendChild(document.createTextNode(c.nome));
       b.addEventListener('click', function(){ qaCat = c.id; qaRenderCats(); });
       w.appendChild(b);
     });

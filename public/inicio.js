@@ -70,7 +70,7 @@
       var linha = document.createElement('a');
       linha.href = '#extrato'; linha.className = 'rec';
       var quando = i.data === hoje ? 'Hoje' : i.data === ontemISO ? 'Ontem' : formatarData(i.data);
-      var ic = document.createElement('div'); ic.className = 'rec-ic'; ic.textContent = (nomeCategoria(i.categoria) || '?').charAt(0).toUpperCase();
+      var ic = document.createElement('div'); ic.className = 'rec-ic'; ic.innerHTML = iconeCategoria(i.categoria || 'outros');   // SVG fixo do código
       var txt = document.createElement('div'); txt.className = 'rec-txt';
       var n = document.createElement('b'); n.textContent = i.nome || nomeCategoria(i.categoria);
       var s = document.createElement('span'); s.textContent = (quando ? quando + ' · ' : '') + nomeCategoria(i.categoria);
