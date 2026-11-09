@@ -3,6 +3,9 @@
   function qaNatureza(nat){
     qaNat = nat;
     var simples = nat !== 'gasto';
+    byId('qaNatReceita').classList.toggle('ativo', nat === 'receita');
+    if(nat === 'receita' && byId('qaPessoa').value === 'casal') byId('qaPessoa').value = 'tiago';   // o salário é de cada pessoa
+    byId('qaPessoa').querySelector('option[value="casal"]').disabled = nat === 'receita';
     byId('qaNatGasto').classList.toggle('ativo', nat === 'gasto');
     byId('qaNatPoup').classList.toggle('ativo', nat === 'poupanca');
     byId('qaNatInvest').classList.toggle('ativo', nat === 'investido');
@@ -19,6 +22,7 @@
   byId('qaNatGasto').addEventListener('click', function(){ qaNatureza('gasto'); });
   byId('qaNatPoup').addEventListener('click', function(){ qaNatureza('poupanca'); });
   byId('qaNatInvest').addEventListener('click', function(){ qaNatureza('investido'); });
+  byId('qaNatReceita').addEventListener('click', function(){ qaNatureza('receita'); });
   byId('qaAnexo').addEventListener('change', /** @this {HTMLInputElement} */ async function(){
     var fi = this.files && this.files[0];
     this.value = '';
@@ -48,6 +52,15 @@
     var pessoa = byId('qaPessoa').value;
     var nomeTxt = byId('qaNome').value.trim().slice(0, 100);
 
+    if(qaNat === 'receita'){   // valor ganho: soma-se ao salário do mês (mesma estrutura de dados de sempre)
+      var mp = mesPessoa(pessoa === 'casal' ? 'tiago' : pessoa, ano, mes);
+      mp.salario = Math.round(((mp.salario || 0) + valor) * 100) / 100;
+      guardar();
+      qaFechar();
+      renderTudo();
+      qaMostrarToast('Receita: ' + euros(valor) + ' (' + nomesPessoa[pessoa === 'casal' ? 'tiago' : pessoa] + ', ' + mesesAbrev[mes] + ')');
+      return;
+    }
     if(qaNat !== 'gasto'){
       var cfg = LISTAS_MES[qaNat];
       var alvo = pessoa === 'casal' ? casalOpcionalMes(ano, mes) : mesPessoa(pessoa, ano, mes);

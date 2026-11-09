@@ -89,7 +89,7 @@ test.describe('Painel + (adicionar gasto)', () => {
   test.beforeEach(async ({ page, request }) => {
     await reiniciar(request, true);
     await abrirApp(page);
-    await page.click('#fabAdd');
+    await page.click('#btnNovaDespesa');
     await expect(page.locator('#qaOverlay')).toBeVisible();
   });
 
@@ -172,7 +172,7 @@ test.describe('Painel + (adicionar gasto)', () => {
   test('só teclado: o foco fica preso no painel, todos os controlos são alcançáveis e grava com Enter', async ({ page }) => {
     await page.keyboard.press('Escape');
     await expect(page.locator('#qaOverlay')).toBeHidden();
-    expect((await focoEm(page)).id).toBe('fabAdd'); // Escape devolve o foco ao botão "+"
+    expect((await focoEm(page)).id).toBe('btnNovaDespesa'); // Escape devolve o foco ao botão "+"
     await page.keyboard.press('Enter');
     await expect(page.locator('#qaOverlay')).toBeVisible();
     expect((await focoEm(page)).id).toBe('qaValor');
@@ -199,7 +199,7 @@ test.describe('Painel + (adicionar gasto)', () => {
     await page.keyboard.press('Enter');
     await expect(page.locator('#qaOverlay')).toBeHidden();
     expect((await lancamentos(page)).opcional).toBe(antes.opcional + 1);
-    expect((await focoEm(page)).id).toBe('fabAdd');
+    expect((await focoEm(page)).id).toBe('btnNovaDespesa');
   });
 });
 

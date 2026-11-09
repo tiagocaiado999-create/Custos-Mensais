@@ -54,8 +54,39 @@
     });
   }
 
+  // ---------- Recentes: os 10 últimos gastos do mês (por data) ----------
+  function desenharRecentes(){
+    var cont = document.getElementById('recentesLista');
+    if(!cont || typeof vistaMes !== 'function') return;
+    var v = vistaMes(pessoaAtual, anoAtual, mesAtual);
+    var lista = v.fixo.concat(v.opcional).map(function(i, k){ i.ordem = k; return i; })
+      .sort(function(a, b){ return (b.data || '').localeCompare(a.data || '') || b.ordem - a.ordem; }).slice(0, 10);
+    cont.textContent = '';
+    if(!lista.length){ var vazio = document.createElement('div'); vazio.className = 'rec-vazio'; vazio.textContent = 'Ainda sem gastos neste mês.'; cont.appendChild(vazio); return; }
+    var hoje = hojeISO();
+    var ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    var ontemISO = ontem.getFullYear() + '-' + String(ontem.getMonth() + 1).padStart(2, '0') + '-' + String(ontem.getDate()).padStart(2, '0');
+    lista.forEach(function(i){
+      var linha = document.createElement('a');
+      linha.href = '#extrato'; linha.className = 'rec';
+      var quando = i.data === hoje ? 'Hoje' : i.data === ontemISO ? 'Ontem' : formatarData(i.data);
+      var ic = document.createElement('div'); ic.className = 'rec-ic'; ic.textContent = (nomeCategoria(i.categoria) || '?').charAt(0).toUpperCase();
+      var txt = document.createElement('div'); txt.className = 'rec-txt';
+      var n = document.createElement('b'); n.textContent = i.nome || nomeCategoria(i.categoria);
+      var s = document.createElement('span'); s.textContent = (quando ? quando + ' · ' : '') + nomeCategoria(i.categoria);
+      txt.appendChild(n); txt.appendChild(s);
+      var val = document.createElement('div'); val.className = 'rec-val'; val.textContent = '−' + euros(i.valor);
+      linha.appendChild(ic); linha.appendChild(txt); linha.appendChild(val);
+      cont.appendChild(linha);
+    });
+  }
+
+  var bDesp = document.getElementById('btnNovaDespesa'), bRec = document.getElementById('btnNovaReceita');
+  if(bDesp) bDesp.addEventListener('click', function(){ qaAbrir(); });
+  if(bRec) bRec.addEventListener('click', function(){ qaAbrir(); qaNatureza('receita'); });
+
   var renderOriginal = renderTudo;
-  renderTudo = function(){ renderOriginal(); desenharMosaico(); };
+  renderTudo = function(){ renderOriginal(); desenharMosaico(); desenharRecentes(); };
 
   // ---------- Início / secções ----------
   function aplicar(){
@@ -69,21 +100,10 @@
     } else {
       document.body.classList.remove('detalhe');
       document.body.classList.add('home');
-      desenharMosaico();
+      desenharMosaico(); desenharRecentes();
     }
     Array.prototype.forEach.call(document.querySelectorAll('.barra a'), function(l){ l.classList.toggle('ativo', l.getAttribute('data-s') === (TITULOS[sec] ? sec : '')); });
     window.scrollTo(0, 0);
-  }
-
-  // esconder valores
-  var olho = document.getElementById('btnOlho');
-  if(olho){
-    try{ if(localStorage.getItem('custos-oculto') === '1'){ document.body.classList.add('oculto'); olho.setAttribute('aria-pressed', 'true'); } }catch(e){}
-    olho.addEventListener('click', function(){
-      var oculto = document.body.classList.toggle('oculto');
-      olho.setAttribute('aria-pressed', oculto ? 'true' : 'false');
-      try{ localStorage.setItem('custos-oculto', oculto ? '1' : '0'); }catch(e){}
-    });
   }
 
   window.addEventListener('hashchange', aplicar);

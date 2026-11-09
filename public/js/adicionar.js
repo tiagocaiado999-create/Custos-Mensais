@@ -62,8 +62,7 @@
     byId('qaOverlay').hidden = false;
     byId('qaValor').focus();
   }
-  function qaFechar(){ qrParar(); byId('qaOverlay').hidden = true; byId('fabAdd').focus(); }
-  byId('fabAdd').addEventListener('click', qaAbrir);
+  function qaFechar(){ qrParar(); byId('qaOverlay').hidden = true; var bf = document.getElementById('btnNovaDespesa'); if(bf) bf.focus(); }
   byId('qaFechar').addEventListener('click', qaFechar);
   // qaGuardar só existe em painel-mais.js (carregado depois): passar a função diretamente ligava o próprio botão (id com o mesmo nome) e o clique não fazia nada
   byId('qaGuardar').addEventListener('click', function(){ qaGuardar(); });

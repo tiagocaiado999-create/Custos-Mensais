@@ -46,7 +46,6 @@
   <button data-p="casal"><i></i>Casal</button>
 </div>
 
-<div class="barra-home"><button type="button" id="btnOlho" aria-label="Esconder valores" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
 
 <div class="resumo">
   <div class="tile"><div class="label">Salário</div><div class="val" id="totalSalario">€0</div></div>
@@ -58,6 +57,16 @@
 </div>
 
 <div id="mosaico" class="mosaico" aria-label="Para onde foi o mês"></div>
+
+<div class="acoes-home">
+  <button type="button" id="btnNovaDespesa" class="acao-grande">+ Nova despesa</button>
+  <button type="button" id="btnNovaReceita" class="acao-peq">+ Receita</button>
+</div>
+
+<section class="recentes" aria-label="Recentes">
+  <div class="recentes-topo"><span>Recentes</span><a href="#extrato">Ver tudo</a></div>
+  <div id="recentesLista"></div>
+</section>
 
 <nav class="barra" aria-label="Secções">
   <a href="#" data-s="" aria-label="Início"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Início</span></a>
@@ -202,7 +211,6 @@
   <button id="btnBackups" type="button">Cópias de segurança</button>
 </div>
 
-<button type="button" id="fabAdd" class="fab" aria-label="Adicionar gasto">+</button>
 <div id="qaOverlay" class="qa-overlay" hidden>
   <div class="qa-sheet" role="dialog" aria-modal="true" aria-label="Adicionar gasto">
     <div class="qa-topo"><span>Novo gasto</span><button type="button" id="qaFechar" aria-label="Fechar">×</button></div>
@@ -216,7 +224,7 @@
       <label class="qa-foto">Usar uma foto do QR<input type="file" id="qaFoto" accept="image/*" capture="environment" hidden></label>
     </div>
     <div id="qaVistaManual" class="qa-vista">
-    <div class="qa-modos qa-nat"><button type="button" id="qaNatGasto" class="ativo">Gasto</button><button type="button" id="qaNatPoup">Poupança</button><button type="button" id="qaNatInvest">Investimento</button></div>
+    <div class="qa-modos qa-nat"><button type="button" id="qaNatGasto" class="ativo">Gasto</button><button type="button" id="qaNatPoup">Poupança</button><button type="button" id="qaNatInvest">Investimento</button><button type="button" id="qaNatReceita">Receita</button></div>
     <div id="qaInfo" class="qa-info" hidden></div>
     <div class="qa-valor"><span>€</span><input type="number" id="qaValor" inputmode="decimal" step="0.01" min="0.01" max="1000000000" placeholder="0,00"></div>
     <div class="qa-cats" id="qaCats"></div>
