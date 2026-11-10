@@ -19,11 +19,14 @@
     var ant = totaisPorCategoria(itensDoMes(pessoaAtual, a2, m2, catTipo));
     byId('catTitulo').textContent = 'Por categoria — ' + nomesPessoa[pessoaAtual] + ' — ' + meses[mesAtual] + ' ' + anoAtual;
     var wrap = byId('catGraficoWrap');
-    var cats = CATEGORIAS.filter(function(c){ return atual[c.id] || ant[c.id]; })
+    // os orçamentos são limites ao total da categoria (fixos + opcionais): só se mostram na vista "Tudo"
+    var orc = catTipo === 'todos' ? orcamentosDe(pessoaAtual) : {};
+    var cats = CATEGORIAS.filter(function(c){ return atual[c.id] || ant[c.id] || orc[c.id]; })
       .sort(function(a, b){ return (atual[b.id] || 0) - (atual[a.id] || 0); });
+    renderOrcEditor();
     if(cats.length === 0){ wrap.innerHTML = '<div class="vazio">Sem lançamentos neste mês.</div>'; return; }
     var total = 0, max = 0;
-    cats.forEach(function(c){ total += atual[c.id] || 0; max = Math.max(max, atual[c.id] || 0, ant[c.id] || 0); });
+    cats.forEach(function(c){ total += atual[c.id] || 0; max = Math.max(max, atual[c.id] || 0, ant[c.id] || 0, orc[c.id] || 0); });
     wrap.innerHTML = '';
     cats.forEach(function(c){
       var v = atual[c.id] || 0, p = ant[c.id] || 0, d = v - p;
@@ -31,18 +34,76 @@
       var cmp = p === 0 ? 'sem gastos em ' + mesesAbrev[m2].toLowerCase()
         : (Math.abs(d) < 0.005 ? 'igual a ' + mesesAbrev[m2].toLowerCase() : (d > 0 ? '+' : '−') + euros(Math.abs(d)) + ' vs ' + mesesAbrev[m2].toLowerCase());
       var cls = p === 0 || Math.abs(d) < 0.005 ? '' : (d > 0 ? ' sobe' : ' desce');
+      var eo = estadoOrcamento(v, orc[c.id]), orcHtml = '';
+      if(eo){
+        orcHtml = '<div class="cat-orc ' + eo.estado + '">' + (eo.estado === 'acima'
+          ? 'Orçamento de ' + euros(eo.limite) + ' ultrapassado em ' + euros(-eo.resto)
+          : eo.pct + '% do orçamento de ' + euros(eo.limite) + ' · ' + (eo.estado === 'perto' ? 'só ' : '') + 'sobram ' + euros(eo.resto)) + '</div>';
+      }
       var linha = document.createElement('div');
       linha.className = 'cat-linha';
+      // só texto fixo do código e números: nada aqui é escrito pelo utilizador
       linha.innerHTML = '<div class="cat-linha-topo"><span class="cat-linha-nome">' + c.nome + '</span><span class="cat-linha-valor">' + euros(v) + ' · ' + pct + '%</span></div>' +
-        '<div class="cat-barra"><i style="width:' + (max ? v / max * 100 : 0) + '%"></i>' + (p ? '<b title="' + mesesAbrev[m2] + '" style="left:' + (p / max * 100) + '%"></b>' : '') + '</div>' +
-        '<div class="cat-cmp' + cls + '">' + cmp + '</div>';
+        '<div class="cat-barra' + (eo ? ' ' + eo.estado : '') + '"><i style="width:' + (max ? v / max * 100 : 0) + '%"></i>' + (p ? '<b title="' + mesesAbrev[m2] + '" style="left:' + (p / max * 100) + '%"></b>' : '') +
+        (eo ? '<u title="Orçamento" style="left:' + (eo.limite / max * 100) + '%"></u>' : '') + '</div>' +
+        '<div class="cat-cmp' + cls + '">' + cmp + '</div>' + orcHtml;
       wrap.appendChild(linha);
     });
     var rodape = document.createElement('div');
     rodape.className = 'cat-legenda';
-    rodape.textContent = 'A marca vertical é o valor do mês anterior.';
+    rodape.textContent = 'A marca vertical é o valor do mês anterior.' + (Object.keys(orc).length ? ' A marca tracejada é o orçamento.' : '');
     wrap.appendChild(rodape);
   }
+
+  // ---------- Orçamentos por categoria (limite mensal; ver estadoOrcamento em nucleo.js) ----------
+  function orcamentosDe(pessoa){
+    if(!dados.orcamentos) dados.orcamentos = { tiago:{}, claudia:{}, casal:{} };
+    if(!dados.orcamentos[pessoa]) dados.orcamentos[pessoa] = {};
+    return dados.orcamentos[pessoa];
+  }
+  var orcAberto = false;
+  function renderOrcEditor(){
+    var btn = byId('orcAbrir'), ed = byId('orcEditor');
+    if(!btn || !ed) return;
+    var orc = orcamentosDe(pessoaAtual), n = Object.keys(orc).length;
+    btn.textContent = (orcAberto ? 'Fechar orçamentos' : 'Orçamentos por categoria') + (n && !orcAberto ? ' (' + n + ')' : '');
+    btn.setAttribute('aria-expanded', orcAberto ? 'true' : 'false');
+    ed.hidden = !orcAberto;
+    // enquanto se escreve num limite não se redesenha o editor (perdia-se o cursor); só o gráfico acima é atualizado
+    if(!orcAberto || (ed.contains(document.activeElement) && ed.getAttribute('data-p') === pessoaAtual)) return;
+    ed.setAttribute('data-p', pessoaAtual);
+    ed.innerHTML = '';
+    var nota = document.createElement('p');
+    nota.className = 'orc-nota';
+    nota.textContent = 'Limite por mês para ' + (pessoaAtual === 'casal' ? 'o casal (os dois juntos)' : nomesPessoa[pessoaAtual]) + '. Deixa vazio para não ter limite.';
+    ed.appendChild(nota);
+    CATEGORIAS.forEach(function(c){
+      var linha = document.createElement('label');
+      linha.className = 'orc-linha';
+      var nome = document.createElement('span');
+      nome.className = 'orc-nome';
+      nome.innerHTML = iconeCategoria(c.id);   // ícone fixo do código
+      nome.appendChild(document.createTextNode(c.nome));
+      var campo = document.createElement('span');
+      campo.className = 'orc-campo';
+      var inp = document.createElement('input');
+      inp.type = 'number'; inp.min = '0'; inp.step = '1'; inp.inputMode = 'decimal'; inp.placeholder = 'sem limite';
+      inp.value = orc[c.id] ? String(orc[c.id]) : '';
+      var pessoa = pessoaAtual;
+      inp.addEventListener('input', function(){
+        var v = Math.round(parseFloat(inp.value) * 100) / 100, o = orcamentosDe(pessoa);
+        if(v > 0) o[c.id] = v; else delete o[c.id];
+        guardar();
+        renderCategorias();
+        renderResumoFrases();
+      });
+      campo.appendChild(inp);
+      campo.appendChild(document.createTextNode(' €'));
+      linha.appendChild(nome); linha.appendChild(campo);
+      ed.appendChild(linha);
+    });
+  }
+  if(byId('orcAbrir')) byId('orcAbrir').addEventListener('click', function(){ orcAberto = !orcAberto; renderOrcEditor(); });
   Array.prototype.forEach.call(document.querySelectorAll('#catTipos button'), function(b){
     b.addEventListener('click', function(){
       catTipo = b.getAttribute('data-t');

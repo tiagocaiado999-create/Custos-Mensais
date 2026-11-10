@@ -23,7 +23,10 @@
   function set(o, path, v){ var p = path.split('.'), k = p.pop(); var t = p.reduce(function(a, x){ if(!a[x]) a[x] = {}; return a[x]; }, o); t[k] = v; }
   function pad(n){ return String(n).padStart(2, '0'); }
   function hojeISO(){ var t = new Date(); return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()); }
-  function fmtData(iso){ var p = (iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : '—'; }
+  // Só aceita AAAA-MM-DD (só algarismos): o resultado vai para innerHTML em tabelas e gráficos, por isso nunca devolve texto livre.
+  function fmtData(iso){ var p = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return p ? p[3] + '/' + p[2] + '/' + p[1] : '—'; }
+  // Nome do local de carregamento: só os nomes fixos do código (um valor desconhecido nos dados aparece como "Outro", nunca tal como veio).
+  function nomeLocal(l){ return Object.prototype.hasOwnProperty.call(LOCAIS, l) ? LOCAIS[l] : LOCAIS.outro; }
   function addMeses(iso, k){
     var p = iso.split('-').map(Number), m = p[1] - 1 + k;
     var ny = p[0] + Math.floor(m / 12), nm = ((m % 12) + 12) % 12, ult = new Date(ny, nm + 1, 0).getDate();
@@ -206,7 +209,7 @@
       var dd = document.createElement('div'); dd.className = 'd';
       var n = document.createElement('div'); n.textContent = r.desc || CATS[r.cat] || 'Gasto';
       var extra = '';
-      if(r.kwh > 0) extra += ' · ' + r.kwh.toLocaleString('pt-PT') + ' kWh' + (r.valor > 0 ? ' (' + euros(r.valor / r.kwh) + '/kWh)' : '') + (r.local ? ' · ' + (LOCAIS[r.local] || r.local) : '');
+      if(r.kwh > 0) extra += ' · ' + r.kwh.toLocaleString('pt-PT') + ' kWh' + (r.valor > 0 ? ' (' + euros(r.valor / r.kwh) + '/kWh)' : '') + (r.local ? ' · ' + nomeLocal(r.local) : '');
       if(r.odo > 0) extra += ' · ' + r.odo.toLocaleString('pt-PT') + ' km';
       var m = document.createElement('div'); m.className = 'm'; m.textContent = fmtData(r.data) + ' · ' + (CATS[r.cat] || 'Outros') + extra;
       dd.appendChild(n); dd.appendChild(m);
@@ -412,7 +415,7 @@
       : '';
     var preco = porData.filter(function(r){ return r.valor > 0; }).map(function(r){
       var l = r.local || 'outro';
-      return { y: r.valor / r.kwh, forma: formas[l] || 'q', cor: cores[l] || 'var(--muted)', rot: fmtData(r.data).slice(0, 5), dica: fmtData(r.data) + ' · ' + (LOCAIS[l] || l) + ': ' + euros(r.valor / r.kwh) + '/kWh' };
+      return { y: r.valor / r.kwh, forma: formas[l] || 'q', cor: cores[l] || 'var(--muted)', rot: fmtData(r.data).slice(0, 5), dica: fmtData(r.data) + ' · ' + nomeLocal(l) + ': ' + euros(r.valor / r.kwh) + '/kWh' };
     });
     $('grafPreco').innerHTML = preco.length
       ? '<h2 style="font-size:.98rem;margin:18px 0 0">Preço por kWh (casa vs. posto público)</h2>' + graficoLinha(preco, '€/kWh', 'Preço por kWh de cada carregamento', { min:0, max:0.5, passo:0.05 }) +
@@ -436,7 +439,7 @@
     t += linhaTab('Total carregado', kwh.toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh · ' + euros(eur));
     t += linhaTab('Preço médio', euros(eur / kwh) + '/kWh');
     Object.keys(loc).forEach(function(k){
-      t += linhaTab('&nbsp;&nbsp;' + (LOCAIS[k] || k), loc[k].kwh.toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh · ' + euros(loc[k].eur) + ' · ' + euros(loc[k].eur / loc[k].kwh) + '/kWh');
+      t += linhaTab('&nbsp;&nbsp;' + nomeLocal(k),loc[k].kwh.toLocaleString('pt-PT', { maximumFractionDigits:1 }) + ' kWh · ' + euros(loc[k].eur) + ' · ' + euros(loc[k].eur / loc[k].kwh) + '/kWh');
     });
     // o 1.º carregamento com quilómetros só marca o ponto de partida; os seguintes repõem a energia gasta desde o anterior
     var oc = en.filter(function(r){ return r.odo > 0; }).sort(function(a, b){ return a.odo - b.odo; });

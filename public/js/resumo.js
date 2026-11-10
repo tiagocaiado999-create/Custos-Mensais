@@ -29,6 +29,16 @@
         var tc = totaisPorCategoria(itens);
         var ids = Object.keys(tc).sort(function(a, b){ return tc[b] - tc[a]; });
         if(ids.length) add(nomeCategoria(ids[0]) + ' foi onde mais ' + v('gastaste', 'gastaram') + ': ' + euros(tc[ids[0]]) + ' (' + Math.round(tc[ids[0]] / total * 100) + '% do total).');
+        // orçamentos: uma frase por categoria ultrapassada; se há limites e nenhum foi passado, uma só frase a dizê-lo
+        var orc = orcamentosDe(pessoaAtual), comLimite = 0, passados = 0;
+        CATEGORIAS.forEach(function(c){
+          var eo = estadoOrcamento(tc[c.id] || 0, orc[c.id]);
+          if(!eo) return;
+          comLimite++;
+          if(eo.estado === 'acima'){ passados++; add(v('Passaste', 'Passaram') + ' o orçamento de ' + c.nome + ' em ' + euros(-eo.resto) + ' (' + euros(tc[c.id] || 0) + ' de ' + euros(eo.limite) + ').', 'sobe'); }
+          else if(eo.estado === 'perto') add(c.nome + ' está perto do limite: ' + eo.pct + '% do orçamento, sobram ' + euros(eo.resto) + '.');
+        });
+        if(comLimite && !passados) add(v('Estás', 'Estão') + ' dentro do orçamento em ' + (comLimite === 1 ? 'a categoria com limite.' : 'todas as ' + comLimite + ' categorias com limite.'), 'desce');
         if(totalAnt > 0){
           var ta = totaisPorCategoria(ant), melhor = null, melhorD = 0;
           ids.forEach(function(id){ var d = (tc[id] || 0) - (ta[id] || 0); if(d > melhorD){ melhorD = d; melhor = id; } });

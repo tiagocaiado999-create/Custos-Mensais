@@ -2,7 +2,7 @@
   // ---------- Faturas guardadas (garantias) ----------
   var qaImagem = null, qaQrTexto = null, qaNat = 'gasto';
   var faturasCache = null, fatAtual = null, fatUrl = null;
-  var PEND_KEY = 'custos-faturas-pendentes', pendMem = null, aEnviarFaturas = false;
+  var PEND_KEY = 'custos-faturas-pendentes', pendMem = null, aEnviarFaturas = false, maisFaturas = false, filaSoEmMemoria = false;
 
   function comprimirImagem(fonte, w, h, max, qualidade){
     var esc = Math.min(1, max / Math.max(w, h));
@@ -26,10 +26,15 @@
   }
   function gravarPendentes(l){
     pendMem = l;
-    try{ localStorage.setItem(PEND_KEY, JSON.stringify(l)); }catch(e){}
+    // Sem espaço no telemóvel (fotos grandes): a fila fica só em memória e perdia-se ao fechar a app. Fica assinalado para o aviso.
+    try{ localStorage.setItem(PEND_KEY, JSON.stringify(l)); filaSoEmMemoria = false; }
+    catch(e){ filaSoEmMemoria = l.length > 0; }
   }
+  // Uma fatura só sai da fila quando o servidor a guardou, ou quando a recusou de vez (dados inválidos, imagem grande demais).
+  // Sem sessão (401), demasiados pedidos (429) ou tempo esgotado (408) são passageiros: a fatura fica na fila para a próxima tentativa.
+  function recusaDefinitiva(status){ return status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429; }
   async function enviarFaturas(){
-    if(aEnviarFaturas) return;
+    if(aEnviarFaturas){ maisFaturas = true; return; }
     aEnviarFaturas = true;
     falhaFaturas = false;
     try{
@@ -37,7 +42,7 @@
       for(var i = 0; i < lista.length; i++){
         var p = lista[i];
         var r = await fetch('/api/faturas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: p.id, meta: p.meta, imagem: p.imagem }) });
-        if(r.ok || (r.status >= 400 && r.status < 500)){
+        if(r.ok || recusaDefinitiva(r.status)){
           gravarPendentes(lerPendentes().filter(function(x){ return x.id !== p.id; }));
           faturasCache = null;
         } else { falhaFaturas = true; break; }
@@ -46,12 +51,15 @@
     aEnviarFaturas = false;
     renderAviso();
     if(!byId('viewFaturas').hidden) renderFaturas();
+    // uma fatura posta na fila enquanto decorria um envio segue logo a seguir (sem esperar pela próxima sincronização)
+    if(maisFaturas){ maisFaturas = false; if(!falhaFaturas) enviarFaturas(); }
   }
   async function enfileirarFatura(id, meta, imagem){
     if(imagem){ try{ meta.mini = await gerarMini(imagem); }catch(e){} }
     var l = lerPendentes().slice();
     l.push({ id: id, meta: meta, imagem: imagem || null });
     gravarPendentes(l);
+    renderAviso();
     enviarFaturas();
   }
   async function carregarFaturas(){

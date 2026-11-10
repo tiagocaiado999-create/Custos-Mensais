@@ -102,7 +102,10 @@
   function integrar(remoto, versaoRemota){
     var r = limpar(remoto);
     var l = limpar(dados);
-    var m = normalizar(fundir(base || {}, l, r));
+    // A versão do servidor só sobe. Se vier mais baixa do que a que já conhecíamos, o servidor foi reposto ou perdeu dados:
+    // nesse caso nada do que está aqui conta como "apagado no servidor" (junta-se tudo e volta a enviar-se).
+    var b = versaoRemota < versao ? {} : (base || {});
+    var m = normalizar(fundir(b, l, r));
     var mudou = !igual(m, l);
     base = r;
     versao = versaoRemota;
@@ -209,6 +212,8 @@
     if(sujo && falhaSync) msgs.push('Alterações por enviar: sem ligação ao servidor. Ficam guardadas neste telemóvel e seguem quando houver rede.');
     else if(sujo && demoraSync) msgs.push('A guardar está a demorar: as alterações ainda não chegaram ao servidor.');
     if(pend && falhaFaturas) msgs.push(pend + (pend === 1 ? ' fatura por enviar' : ' faturas por enviar') + ' para o servidor.');
+    // typeof: faturas.js é carregado depois deste ficheiro
+    if(pend && typeof filaSoEmMemoria !== 'undefined' && filaSoEmMemoria) msgs.push('Sem espaço neste telemóvel para guardar ' + (pend === 1 ? 'a fatura' : 'as faturas') + ' por enviar: não feches a app até ' + (pend === 1 ? 'seguir' : 'seguirem') + ' para o servidor.');
     byId('avisoTexto').textContent = msgs.join(' ');
     byId('avisoSync').hidden = msgs.length === 0;
   }

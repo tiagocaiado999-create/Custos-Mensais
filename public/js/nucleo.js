@@ -8,7 +8,8 @@
    * @typedef {{ ativos: Ativo[], retirados: object[] }} Investimentos
    * @typedef {{ tiago: Object<string, Mes>, claudia: Object<string, Mes>, casalOpcional: Object<string, Mes>,
    *   lojas: Object<string, { nome: string, categoria?: string }>,
-   *   investimentos: { tiago: Investimentos, claudia: Investimentos, casal: Investimentos } }} Dados
+   *   investimentos: { tiago: Investimentos, claudia: Investimentos, casal: Investimentos },
+   *   orcamentos: { tiago: Object<string, number>, claudia: Object<string, number>, casal: Object<string, number> } }} Dados
    */
   var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   var mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -58,7 +59,23 @@
   function somaLista(lista){ return lista.reduce(function(s,i){ return s + (Number(i.valor)||0); }, 0); }
 
   function investVazio(){ return { ativos: [], retirados: [] }; }
-  var dadosDefault = { tiago:{}, claudia:{}, casalOpcional:{}, lojas:{}, investimentos:{ tiago: investVazio(), claudia: investVazio(), casal: investVazio() } };
+  var dadosDefault = { tiago:{}, claudia:{}, casalOpcional:{}, lojas:{}, investimentos:{ tiago: investVazio(), claudia: investVazio(), casal: investVazio() }, orcamentos:{ tiago:{}, claudia:{}, casal:{} } };
+
+  // ---------- Orçamentos por categoria ----------
+  // dados.orcamentos[pessoa][categoria] = limite mensal em euros (sem a chave = sem limite). O casal tem os seus próprios limites.
+  var ORC_PERTO = 0.8;   // a partir de 80% do limite avisa que está perto
+  /**
+   * Compara o gasto de uma categoria com o seu limite mensal.
+   * @param {number} gasto @param {*} limite
+   * @returns {{ limite: number, pct: number, resto: number, estado: 'ok'|'perto'|'acima' } | null} null quando não há limite
+   */
+  function estadoOrcamento(gasto, limite){
+    var lim = Number(limite);
+    if(!(lim > 0)) return null;
+    var g = Number(gasto) || 0;
+    var resto = Math.round((lim - g) * 100) / 100;
+    return { limite: lim, pct: Math.round(g / lim * 100), resto: resto, estado: resto < 0 ? 'acima' : (g >= lim * ORC_PERTO ? 'perto' : 'ok') };
+  }
 
   // Armazenamento partilhado (api/data.js + Redis) com versões: cada gravação junta as alterações em vez de substituir tudo.
   var guardarTimer = null;
@@ -84,6 +101,13 @@
     if(!d.investimentos.tiago) d.investimentos.tiago = investVazio();
     if(!d.investimentos.claudia) d.investimentos.claudia = investVazio();
     if(!d.investimentos.casal) d.investimentos.casal = investVazio();
+    // orçamentos: dados antigos não têm o campo; limites que não sejam um número positivo são retirados
+    if(!d.orcamentos || typeof d.orcamentos !== 'object' || Array.isArray(d.orcamentos)) d.orcamentos = {};
+    ['tiago','claudia','casal'].forEach(function(p){
+      var o = d.orcamentos[p];
+      if(!o || typeof o !== 'object' || Array.isArray(o)) o = d.orcamentos[p] = {};
+      Object.keys(o).forEach(function(c){ if(!(Number(o[c]) > 0)) delete o[c]; else o[c] = Number(o[c]); });
+    });
     ['tiago','claudia'].forEach(function(p){
       Object.keys(d[p]).forEach(function(k){
         migrarItens(d[p][k].fixo);

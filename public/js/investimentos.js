@@ -65,7 +65,7 @@
       var xi = cx - barW - 3, xa = cx + 3;
       svg += '<rect x="' + xi + '" y="' + (yBase-hi) + '" width="' + barW + '" height="' + hi + '" fill="' + corMuted + '" rx="2"/>';
       svg += '<rect x="' + xa + '" y="' + (yBase-ha) + '" width="' + barW + '" height="' + ha + '" fill="' + (va >= vi ? corFixo : corOpcional) + '" rx="2"/>';
-      svg += '<text x="' + cx + '" y="' + (h - padBottom + 16) + '" text-anchor="middle" font-size="10" fill="' + corMuted + '">' + (inv.nome.length > 10 ? inv.nome.slice(0,9)+'…' : inv.nome) + '</text>';
+      svg += '<text x="' + cx + '" y="' + (h - padBottom + 16) + '" text-anchor="middle" font-size="10" fill="' + corMuted + '">' + esc(String(inv.nome || '').length > 10 ? String(inv.nome).slice(0,9)+'…' : inv.nome) + '</text>';
       svg += '<text x="' + cx + '" y="' + (yBase - Math.max(hi,ha) - 6) + '" text-anchor="middle" font-size="9" fill="' + corFg + '" font-variant-numeric="tabular-nums">' + Math.round(va) + '€</text>';
     });
     svg += '</svg>';
@@ -105,7 +105,7 @@
       var temTicker = !!inv.ticker;
       var temAtual = temValorAtualDe(inv);
       var valorAtualEfetivo = valorAtualDe(inv);
-      var metaTxt = 'investido ' + euros(inv.valor) + (inv.data ? ' · ' + formatarData(inv.data) : '') + (temTicker ? ' · ' + esc(inv.ticker) : '');
+      var metaTxt = 'investido ' + euros(inv.valor) + (inv.data ? ' · ' + esc(formatarData(inv.data)) : '') + (temTicker ? ' · ' + esc(inv.ticker) : '');
       if(temAtual){
         var lucroPot = valorAtualEfetivo - Number(inv.valor);
         var pctPot = inv.valor > 0 ? (lucroPot / inv.valor * 100) : 0;
@@ -225,7 +225,7 @@
       row.className = 'invest-linha';
       var nomeEl = document.createElement('div');
       nomeEl.className = 'nome';
-      var metaTxt = 'investido ' + euros(inv.valorInvestido) + (inv.dataInvestido ? ' (' + formatarData(inv.dataInvestido) + ')' : '') + ' · retirado ' + euros(inv.valorRetirado) + (inv.data ? ' (' + formatarData(inv.data) + ')' : '');
+      var metaTxt = 'investido ' + euros(inv.valorInvestido) + (inv.dataInvestido ? ' (' + esc(formatarData(inv.dataInvestido)) + ')' : '') + ' · retirado ' + euros(inv.valorRetirado) + (inv.data ? ' (' + esc(formatarData(inv.data)) + ')' : '');
       nomeEl.innerHTML = esc(inv.nome) + '<br><span class="meta">' + metaTxt + '</span>';
       var lucroEl = document.createElement('div');
       lucroEl.className = 'valor ' + (lucro >= 0 ? 'lucro-pos' : 'lucro-neg');

@@ -12,7 +12,7 @@ const json = (x) => JSON.parse(JSON.stringify(x));
 
 test('normalizar: dados vazios ficam com a estrutura completa', () => {
   const d = normalizar(null);
-  assert.deepEqual(Object.keys(d).sort(), ['casalOpcional', 'claudia', 'investimentos', 'lojas', 'tiago']);
+  assert.deepEqual(Object.keys(d).sort(), ['casalOpcional', 'claudia', 'investimentos', 'lojas', 'orcamentos', 'tiago']);
   assert.deepEqual(d.investimentos.casal, { ativos: [], retirados: [] });
 });
 
