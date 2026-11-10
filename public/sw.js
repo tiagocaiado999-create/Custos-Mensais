@@ -1,7 +1,7 @@
 // Service worker: a app abre mesmo sem rede (usa a última versão guardada).
 // Os dados (/api/) nunca são guardados aqui: vêm sempre do servidor.
 // Mudar VERSAO sempre que a lista PRE_CACHE mudar, para limpar a cache antiga.
-const VERSAO = 'custos-v27';
+const VERSAO = 'custos-v28';
 const ESPERA_MS = 4000;   // tempo máximo à espera da rede quando já há uma cópia guardada
 const PRE_CACHE = [
   '/', '/style.css', '/inicio.css', '/inicio.js', '/tema.css', '/tema.js', '/auth.js', '/gestao.html', '/login.html', '/carro.html', '/carro.css', '/carro.js', '/negocio.html', '/negocio.css', '/negocio.js', '/manifest.webmanifest',
