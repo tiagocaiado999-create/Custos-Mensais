@@ -5,6 +5,7 @@
     document.getElementById('viewInvestimentos').hidden = tab !== 'investimentos';
     document.getElementById('viewPesquisar').hidden = tab !== 'pesquisar';
     document.getElementById('viewFaturas').hidden = tab !== 'faturas';
+    document.getElementById('viewPoupanca').hidden = tab !== 'poupanca';
     document.getElementById('tabFaturas').classList.toggle('ativo', tab === 'faturas');
     document.getElementById('tabPesquisar').classList.toggle('ativo', tab === 'pesquisar');
     document.getElementById('tabExtrato').classList.toggle('ativo', tab === 'extrato');

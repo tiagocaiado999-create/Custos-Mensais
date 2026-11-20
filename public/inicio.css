@@ -117,6 +117,40 @@ body.home footer{color:var(--muted)}
 .mo b,.mo.peq b{font-size:clamp(.7rem,14cqw,1.5rem)}
 .mo span,.mo.peq span{font-size:clamp(.66rem,10cqw,.8rem)}
 
+/* ---------- secção Poupança (#poupanca): acumulado, gráfico de 12 meses e lista por mês ---------- */
+body.home #viewPoupanca{display:none !important}
+#viewPoupanca .recentes{display:block}   /* a lista "Por mês" usa o estilo dos Recentes, que as secções escondem */
+.pe-meia{display:grid;gap:4px;margin:0 0 12px;padding:18px 18px 14px;border-radius:var(--radius);background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.pm-topo{font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pm-total{font-weight:500;font-size:2.4rem;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.pm-sub{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted)}
+.pm-mes.sobe{color:var(--poup);font-weight:600}
+.pm-graf{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:12px}
+.pm-acao{width:100%;min-height:52px;border:none;border-radius:20px;font:inherit;font-weight:700;font-size:1rem;cursor:pointer;margin:0 0 18px}
+.pm-linha{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--border)}
+.pm-linha:last-child{border-bottom:none}
+.pm-linha b{flex:1;min-width:0;font-weight:600}
+.pm-linha span{font-size:.78rem;color:var(--muted);white-space:nowrap}
+.pm-linha em{font-style:normal;font-weight:600;font-variant-numeric:tabular-nums;color:var(--poup);white-space:nowrap;min-width:84px;text-align:right}
+.pm-col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.pm-col i{display:block;width:100%;max-width:18px;border-radius:4px 4px 2px 2px;background:color-mix(in srgb, var(--poup) 40%, var(--surface))}
+.pm-col.atual i{background:var(--poup)}
+.pm-col small{font-size:.6rem;color:var(--muted);line-height:1}
+.pm-col.atual small{color:var(--fg);font-weight:600}
+/* barra realçada (rato, toque ou teclado) e a caixinha com o valor desse mês */
+.pm-col{cursor:pointer;outline:none}
+.pm-col i{position:relative;transition:background .12s}
+.pm-col:hover i,.pm-col:focus i{background:var(--poup)}
+.pm-col:hover > small,.pm-col:focus > small{color:var(--fg);font-weight:600}
+.pm-col:focus-visible i{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--poup)}
+.pm-dica{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:5;flex-direction:column;align-items:center;gap:1px;padding:6px 10px;border-radius:10px;background:var(--fg);color:var(--bg);font-style:normal;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none}
+.pm-col.esq .pm-dica{left:0;transform:none;align-items:flex-start}
+.pm-col.dir .pm-dica{left:auto;right:0;transform:none;align-items:flex-end}
+.pm-dica b{font-size:.95rem;font-weight:700;font-variant-numeric:tabular-nums}
+.pm-col .pm-dica small{font-size:.66rem;font-weight:400;color:inherit;opacity:.75;line-height:1.2}
+.pm-col:hover .pm-dica,.pm-col:focus .pm-dica{display:flex}
+@media (prefers-reduced-motion: reduce){ .pm-col i{transition:none} }
+
 /* ---------- botões de ação e recentes ---------- */
 body.detalhe .acoes-home,body.detalhe .recentes{display:none}
 .acoes-home{display:flex;gap:10px;margin:8px 0 18px}
