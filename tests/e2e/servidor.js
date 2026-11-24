@@ -23,7 +23,7 @@ function dadosIniciais() {
 
 let estado;
 function reiniciar(logado) {
-  estado = { logado: logado, versao: 1, dados: dadosIniciais(), logins: [], gravacoes: 0, recusadas: 0 };
+  estado = { logado: logado, versao: 1, dados: dadosIniciais(), logins: [], gravacoes: 0, recusadas: 0, negocio: { versao: 0, dados: null } };
 }
 reiniciar(true);
 
@@ -77,6 +77,18 @@ http.createServer(async (req, res) => {
     if (url.searchParams.get('desde') === String(estado.versao)) return json(res, 200, { semAlteracoes: true, versao: estado.versao });
     return json(res, 200, { dados: estado.dados, versao: estado.versao });
   }
+  // página Negócio: um documento com versão (409 se a versão não bater certo), como api/negocio.ts
+  if (caminho === '/api/negocio') {
+    if (!estado.logado) return json(res, 401, { erro: 'Sem sessão.' });
+    if (req.method === 'POST') {
+      const corpo = JSON.parse((await lerCorpo(req)).toString('utf8'));
+      if (corpo.versao !== estado.negocio.versao) return json(res, 409, { erro: 'Conflito de versão', ...estado.negocio });
+      estado.negocio = { versao: estado.negocio.versao + 1, dados: corpo.dados };
+      return json(res, 200, { ok: true, versao: estado.negocio.versao });
+    }
+    return json(res, 200, estado.negocio);
+  }
+  if (caminho === '/api/negocio-fafe') return json(res, 200, { ligado: false, compras: [], vendas: [], pcs: [], stock: null });
   if (caminho.startsWith('/api/')) return json(res, 200, {});
 
   let rel = caminho === '/' ? '/index.html' : caminho;

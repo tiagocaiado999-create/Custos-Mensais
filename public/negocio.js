@@ -10,7 +10,7 @@
   var dadosMain = null;                       // dados principais (só leitura), para o saldo do mês
   var hoje = new Date(), ano = hoje.getFullYear(), mes = hoje.getMonth();
 
-  function padrao(){ return { compras:[], vendas:[] }; }
+  function padrao(){ return { compras:[], vendas:[], dac7:{} }; }
   function pad(n){ return String(n).padStart(2, '0'); }
   function hojeISO(){ return hoje.getFullYear() + '-' + pad(hoje.getMonth() + 1) + '-' + pad(hoje.getDate()); }
   function chaveMes(){ return ano + '-' + pad(mes + 1); }
@@ -109,6 +109,100 @@
     d = Object.assign(padrao(), dados || {});
     if(!Array.isArray(d.compras)) d.compras = [];
     if(!Array.isArray(d.vendas)) d.vendas = [];
+    if(!d.dac7 || typeof d.dac7 !== 'object' || Array.isArray(d.dac7)) d.dac7 = {};   // dados antigos sem a aba DAC7
+  }
+
+  // ---------- Limite DAC7 (aba própria; números escritos à mão, por plataforma e por ano civil) ----------
+  // d.dac7['AAAA'] = [{ id, nome, vendas, valor, em }]. A plataforma comunica às Finanças com 30 vendas ou mais de 2000 €.
+  var DAC7_EUROS = 2000, DAC7_VENDAS = 30, DAC7_PERTO = 0.85, dacAno = hoje.getFullYear();
+  function plataformas(){ var l = d.dac7[String(dacAno)]; return Array.isArray(l) ? l : []; }
+  function estadoDac7(p){
+    var v = Number(p.valor) || 0, n = Number(p.vendas) || 0;
+    if(v > DAC7_EUROS || n >= DAC7_VENDAS) return 'passou';
+    if(v >= DAC7_EUROS * DAC7_PERTO || n >= Math.ceil(DAC7_VENDAS * DAC7_PERTO)) return 'perto';
+    return 'ok';
+  }
+  function textoDac7(p, e){
+    var v = Number(p.valor) || 0, n = Number(p.vendas) || 0;
+    if(e === 'passou') return '⚠ Chegaste ao limite em ' + (p.nome || 'esta plataforma') + ': ' + (n >= DAC7_VENDAS ? n + ' vendas' : euros(v)) + '. A plataforma vai comunicar estas vendas às Finanças.';
+    var falta = 'Faltam ' + euros(Math.max(0, DAC7_EUROS - v)) + ' e ' + Math.max(0, DAC7_VENDAS - n) + ' venda(s) para o limite.';
+    return e === 'perto' ? '⚠ Perto do limite. ' + falta : falta;
+  }
+  function pintarPlataforma(box, p){
+    var v = Number(p.valor) || 0, n = Number(p.vendas) || 0, e = estadoDac7(p);
+    var bE = box.querySelector('.bEuros'), bN = box.querySelector('.bVendas');
+    bE.style.width = Math.min(100, v / DAC7_EUROS * 100) + '%';
+    bN.style.width = Math.min(100, n / DAC7_VENDAS * 100) + '%';
+    bE.className = 'bEuros ' + (v > DAC7_EUROS ? 'passou' : v >= DAC7_EUROS * DAC7_PERTO ? 'perto' : '');
+    bN.className = 'bVendas ' + (n >= DAC7_VENDAS ? 'passou' : n >= Math.ceil(DAC7_VENDAS * DAC7_PERTO) ? 'perto' : '');
+    box.querySelector('.rEuros').textContent = euros(v) + ' de ' + euros(DAC7_EUROS);
+    box.querySelector('.rVendas').textContent = n + ' de ' + DAC7_VENDAS;
+    bE.parentNode.setAttribute('aria-valuenow', String(r2(v)));
+    bN.parentNode.setAttribute('aria-valuenow', String(n));
+    var est = box.querySelector('.dac-estado');
+    est.className = 'dac-estado ' + (e === 'ok' ? '' : e);
+    est.textContent = textoDac7(p, e) + (p.em ? ' (atualizado a ' + fmtData(p.em) + ')' : '');
+  }
+  function totalDac7(){
+    var l = plataformas();
+    $('dTotal').textContent = l.length > 1 ? 'Total das plataformas em ' + dacAno + ': ' + euros(soma(l, function(p){ return p.valor; })) + ' em ' + soma(l, function(p){ return p.vendas; }) + ' vendas (o limite conta cada plataforma à parte).' : '';
+  }
+  function barra(rotulo, classe, max){
+    return '<div class="rot"><span>' + rotulo + '</span><b class="r' + classe.slice(2) + '"></b></div>' +
+      '<div class="barra" role="progressbar" aria-label="' + rotulo + '" aria-valuemin="0" aria-valuemax="' + max + '"><i class="' + classe.slice(1) + '"></i></div>';
+  }
+  function renderDac7(){
+    $('dAno').textContent = 'Ano de ' + dacAno;
+    var box = $('dacLista'); box.textContent = '';
+    var l = plataformas();
+    if(!l.length){ var n = document.createElement('div'); n.className = 'nota'; n.textContent = 'Ainda sem plataformas em ' + dacAno + '. Adiciona em baixo a primeira (ex.: Vinted).'; box.appendChild(n); }
+    l.forEach(function(p){
+      var el = document.createElement('div'); el.className = 'plat';
+      el.innerHTML = '<div class="plat-topo"><strong></strong><button type="button" class="x" aria-label="Apagar plataforma">×</button></div>' +
+        '<div class="campos"><div><label>Vendas feitas</label><input type="number" class="iVendas" inputmode="numeric" min="0" step="1"></div>' +
+        '<div><label>Dinheiro recebido (€)</label><input type="number" class="iValor" inputmode="decimal" min="0" step="0.01"></div></div>' +
+        barra('Dinheiro', '.bEuros', DAC7_EUROS) + barra('Vendas', '.bVendas', DAC7_VENDAS) + '<div class="dac-estado" role="status"></div>';
+      el.querySelector('strong').textContent = p.nome;
+      var iN = el.querySelector('.iVendas'), iV = el.querySelector('.iValor');
+      iN.id = 'dVendas-' + p.id; iV.id = 'dValor-' + p.id;
+      iN.previousElementSibling.setAttribute('for', iN.id); iV.previousElementSibling.setAttribute('for', iV.id);
+      iN.value = p.vendas ? String(p.vendas) : ''; iV.value = p.valor ? String(p.valor) : '';
+      var mudou = function(){
+        p.vendas = Math.max(0, Math.floor(Number(iN.value) || 0));
+        p.valor = Math.max(0, r2(Number(String(iV.value).replace(',', '.')) || 0));
+        p.em = hojeISO();
+        pintarPlataforma(el, p); totalDac7(); alterado();
+      };
+      iN.addEventListener('input', mudou); iV.addEventListener('input', mudou);
+      el.querySelector('button.x').setAttribute('aria-label', 'Apagar ' + p.nome);
+      el.querySelector('button.x').addEventListener('click', function(){
+        if(!confirm('Apagar «' + p.nome + '» de ' + dacAno + '?')) return;
+        d.dac7[String(dacAno)] = plataformas().filter(function(y){ return y.id !== p.id; });
+        renderDac7(); alterado();
+      });
+      pintarPlataforma(el, p);
+      box.appendChild(el);
+    });
+    totalDac7();
+  }
+  function adicionarPlataforma(){
+    var nome = $('dNome').value.trim().slice(0, 40);
+    if(!nome){ $('dNome').focus(); return; }
+    var l = plataformas();
+    var existe = l.filter(function(p){ return String(p.nome).toLowerCase() === nome.toLowerCase(); })[0];
+    if(!existe){ l = l.concat([{ id: novoId(), nome: nome, vendas: 0, valor: 0, em: '' }]); d.dac7[String(dacAno)] = l; alterado(); }
+    $('dNome').value = '';
+    renderDac7();
+    var alvo = existe || l[l.length - 1];
+    var campo = $('dVendas-' + alvo.id); if(campo) campo.focus();
+  }
+  function mostrarAba(qual){
+    var dac = qual === 'dac7';
+    $('abaNegocio').hidden = dac; $('abaDac7').hidden = !dac;
+    $('tabNegocio').className = dac ? '' : 'ativo'; $('tabDac7').className = dac ? 'ativo' : '';
+    $('tabNegocio').setAttribute('aria-selected', String(!dac)); $('tabDac7').setAttribute('aria-selected', String(dac));
+    if(dac) renderDac7();
+    try{ history.replaceState(null, '', dac ? '#dac7' : location.pathname + location.search); }catch(e){}
   }
   async function guardar(){
     guardarTimer = null;
@@ -119,7 +213,7 @@
       var j = {}; try{ j = await r.json(); }catch(e){}
       if(r.ok){ versao = j.versao; estado(sujo ? 'A guardar…' : 'Guardado'); }
       else if(r.status === 409 && j.dados){
-        versao = j.versao; aplicarServidor(j.dados); render();
+        versao = j.versao; aplicarServidor(j.dados); render(); renderDac7();
         estado('Outra pessoa alterou entretanto: mostrei a versão mais recente. Repete a tua alteração, se for preciso.', true);
         sujo = false;
       } else throw new Error(j.erro || ('HTTP ' + r.status));
@@ -149,7 +243,7 @@
       var r2d = await fetch('/api/data?modo=v2', { cache:'no-store' });
       if(r2d.ok) dadosMain = (await r2d.json()).dados;
     }catch(e){}
-    render();
+    render(); renderDac7();
   }
 
   function mudarMes(delta){
@@ -186,6 +280,13 @@
   $('cData').value = hojeISO(); $('vData').value = hojeISO();
   $('cAdd').addEventListener('click', function(){ adicionar('compras', 'cNome', 'cValor', 'cData'); });
   $('vAdd').addEventListener('click', function(){ adicionar('vendas', 'vNome', 'vValor', 'vData', 'vCusto'); });
+  $('tabNegocio').addEventListener('click', function(){ mostrarAba('negocio'); });
+  $('tabDac7').addEventListener('click', function(){ mostrarAba('dac7'); });
+  $('dAnoAnt').addEventListener('click', function(){ dacAno--; renderDac7(); });
+  $('dAnoSeg').addEventListener('click', function(){ dacAno++; renderDac7(); });
+  $('dAdd').addEventListener('click', adicionarPlataforma);
+  $('dNome').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); adicionarPlataforma(); } });
+  if(location.hash === '#dac7') mostrarAba('dac7');
   window.addEventListener('pagehide', function(){
     if(sujo){ try{ fetch('/api/negocio', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ versao: versao, dados: d }), keepalive: true }); }catch(e){} }
   });

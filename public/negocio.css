@@ -3,3 +3,19 @@
 .mes-nav strong{font-family:Georgia,serif;font-weight:600}
 .reg .d .m b{font-weight:600}
 .reg button.vender{padding:5px 10px;font-size:.8rem}
+:root{--aviso:#a8730c}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--aviso:#e0b552} }
+:root[data-theme="dark"]{--aviso:#e0b552}
+.plat{padding:12px 0;border-bottom:1px solid var(--border)}
+.plat:last-child{border-bottom:none}
+.plat-topo{display:flex;align-items:center;gap:8px}
+.plat-topo strong{flex:1;font-size:1rem;overflow-wrap:anywhere}
+.plat .campos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.plat .rot{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;color:var(--muted);margin-top:8px}
+.plat .rot b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+.plat .barra i{background:var(--ok);transition:width .2s}
+.plat .barra i.perto{background:var(--aviso)}
+.plat .barra i.passou{background:var(--erro)}
+.dac-estado{margin-top:8px;padding:8px 12px;border-radius:8px;font-size:.84rem;background:var(--bg);border-left:3px solid var(--ok)}
+.dac-estado.perto{border-left-color:var(--aviso)}
+.dac-estado.passou{border-left-color:var(--erro);color:var(--erro)}

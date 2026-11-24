@@ -16,6 +16,12 @@
 <h1>Negócio</h1>
 <p>Compra e venda de peças e PCs. Parte do saldo do mês do Tiago; o que está no FafeBuilds entra sozinho. <span id="estado" class="estado" role="status"></span></p>
 
+<div class="tabs" role="tablist">
+  <button type="button" role="tab" id="tabNegocio" class="ativo" aria-selected="true" aria-controls="abaNegocio">Negócio</button>
+  <button type="button" role="tab" id="tabDac7" aria-selected="false" aria-controls="abaDac7">Limite DAC7</button>
+</div>
+
+<div id="abaNegocio" role="tabpanel" aria-labelledby="tabNegocio">
 <div class="mes-nav"><button type="button" id="mesAnt" aria-label="Mês anterior">‹</button><strong id="mesLabel"></strong><button type="button" id="mesSeg" aria-label="Mês seguinte">›</button></div>
 
 <section class="card">
@@ -79,6 +85,24 @@
     <button type="button" id="vAdd" class="grande">Adicionar venda</button>
   </div>
 </section>
+
+</div>
+
+<div id="abaDac7" role="tabpanel" aria-labelledby="tabDac7" hidden>
+<div class="mes-nav"><button type="button" id="dAnoAnt" aria-label="Ano anterior">‹</button><strong id="dAno"></strong><button type="button" id="dAnoSeg" aria-label="Ano seguinte">›</button></div>
+
+<section class="card">
+  <h2>Limite DAC7</h2>
+  <p>Cada plataforma comunica as tuas vendas às Finanças quando chegas a <b>30 vendas</b> ou passas os <b>2000 €</b> no mesmo ano civil. Conta cada plataforma à parte, só as vendas (as compras não contam), e recomeça a 1 de janeiro. Os números são os que escreves aqui.</p>
+  <div id="dacLista"></div>
+  <div class="add">
+    <div class="grande"><label for="dNome">Plataforma</label><input type="text" id="dNome" list="dSugestoes" maxlength="40" placeholder="ex.: Vinted"></div>
+    <button type="button" id="dAdd" class="grande">Adicionar plataforma</button>
+  </div>
+  <datalist id="dSugestoes"><option value="Vinted"><option value="OLX"><option value="Wallapop"><option value="CustoJusto"><option value="eBay"></datalist>
+  <div class="nota" id="dTotal"></div>
+</section>
+</div>
 
 <script src="/auth.js"></script>
 <script src="/negocio.js"></script>
