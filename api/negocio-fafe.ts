@@ -4,13 +4,15 @@ import { exigirSessao } from './_sessao';
 import { lerFafe } from './_fafe';
 import { msg } from './_util';
 
-// Peças e PCs do FafeBuilds para a página do negócio. Só leitura: o que se guarda aqui é só uma cópia de 5 minutos.
+// Peças e PCs do FafeBuilds para a página do negócio. Só leitura.
+// Lê sempre na hora (a página só pede isto ao abrir): uma venda anulada ou uma build vendida no FafeBuilds aparece
+// logo. A cópia guardada só serve quando o FafeBuilds não responde (fica marcada como desatualizada).
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!exigirSessao(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET') { res.status(405).json({ erro: 'Método não permitido' }); return; }
   try {
-    const f = await lerFafe(getCliente());
+    const f = await lerFafe(getCliente(), true);
     const it = f.dados ? f.dados.items : [];
     res.status(200).json({
       ligado: f.ligado, erro: f.erro, desatualizado: f.desatualizado, atualizadoEm: f.atualizadoEm,
