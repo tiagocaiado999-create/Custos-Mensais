@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       compras: it.map((i) => ({ id: i.id, nome: i.name, valor: i.cost, data: i.boughtAt || '', vendida: i.sold, previsto: i.sell, parada: i.stale, dias: i.days })),
       vendas: it.filter((i) => i.sold && i.soldPrice !== null)
         .map((i) => ({ id: i.id, nome: i.name, valor: i.soldPrice as number, custo: i.cost, data: i.soldAt || i.boughtAt || '' })),
-      pcs: f.dados ? f.dados.pcs.map((p) => ({ id: p.id, nome: p.title, valor: p.price, custo: p.cost, data: p.soldAt })) : [],
+      pcs: f.dados ? f.dados.pcs.map((p) => ({ id: p.id, nome: p.title, valor: p.price, custo: p.cost, extras: p.extras || 0, data: p.soldAt })) : [],
       stock: f.dados ? f.dados.stock : null
     });
   } catch (e) {

@@ -32,10 +32,10 @@
     var dd = document.createElement('div'); dd.className = 'd';
     var nome = document.createElement('div'); nome.textContent = x.nome || '(sem nome)';
     var m = document.createElement('div'); m.className = 'm';
-    m.textContent = fmtData(x.data) + (tipo === 'pcs' ? ' · vendido por ' + euros(x.valor) + ' · custo ' + euros(x.custo) : tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId || x.vendida ? ' · vendida' : (x.parada ? ' · parada há ' + x.dias + ' dias' : ''))) + (x.auto ? ' · FafeBuilds' : '');
+    m.textContent = fmtData(x.data) + (tipo === 'pcs' ? ' · vendido por ' + euros(x.valor) + ' · custo ' + euros(x.custo) + (x.extras ? ' (inclui ' + euros(x.extras) + ' de custos adicionais)' : '') : tipo === 'vendas' ? ' · paguei ' + euros(x.custo) + ' · lucro ' + euros(x.valor - (x.custo || 0)) : (x.vendaId || x.vendida ? ' · vendida' : (x.parada ? ' · parada há ' + x.dias + ' dias' : ''))) + (x.auto ? ' · FafeBuilds' : '');
     dd.appendChild(nome); dd.appendChild(m);
     var v = document.createElement('div'); v.className = 'v ' + (tipo === 'compras' ? 'verm' : 'verde');
-    v.textContent = tipo === 'pcs' ? '+' + euros(x.valor - (x.custo || 0)) : (tipo === 'vendas' ? '+' : '−') + euros(x.valor);
+    v.textContent = tipo === 'pcs' ? (x.valor - (x.custo || 0) < 0 ? '−' : '+') + euros(Math.abs(x.valor - (x.custo || 0))) : (tipo === 'vendas' ? '+' : '−') + euros(x.valor);
     var b = document.createElement('button'); b.type = 'button'; b.className = 'x'; b.textContent = '×'; b.setAttribute('aria-label', 'Apagar');
     b.addEventListener('click', function(){
       if(!confirm('Apagar «' + (x.nome || 'sem nome') + '»?')) return;

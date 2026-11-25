@@ -9,7 +9,8 @@ const VALIDADE_MS = 5 * 60 * 1000;
 
 export interface RespostaFafe {
   items: { id: string; name: string; cost: number; boughtAt: string | null; sell: number | null; stale: boolean; days: number | null; sold: boolean; soldPrice: number | null; soldAt: string | null }[];
-  pcs: { id: string; title: string; price: number; cost: number; soldAt: string }[];
+  /** `extras`: custos adicionais da build (pasta térmica, portes...), já incluídos em `cost` (FafeBuilds de 25/11/2026 em diante). */
+  pcs: { id: string; title: string; price: number; cost: number; extras?: number; soldAt: string }[];
   stock: { count: number; cost: number; sell: number; staleCount: number; staleCost: number };
 }
 export interface ResultadoFafe { ligado: boolean; dados: RespostaFafe | null; atualizadoEm?: string; desatualizado?: boolean; erro?: string }
