@@ -19,3 +19,10 @@
 .dac-estado{margin-top:8px;padding:8px 12px;border-radius:8px;font-size:.84rem;background:var(--bg);border-left:3px solid var(--ok)}
 .dac-estado.perto{border-left-color:var(--aviso)}
 .dac-estado.passou{border-left-color:var(--erro);color:var(--erro)}
+/* DAC7: vendas registadas e resumo (base escrita à mão + registadas = total para o limite) */
+.dac-registadas:empty{display:none}
+.dac-registadas{margin-top:6px}
+.dac-resumo{margin-top:12px}
+.dac-resumo-plat{margin-top:10px;font-weight:600}
+.dac-resumo-linha{display:flex;justify-content:space-between;gap:8px;font-size:.84rem;color:var(--muted);padding:3px 0;font-variant-numeric:tabular-nums}
+.dac-resumo-linha.forte{color:var(--fg);font-weight:600;border-top:1px solid var(--border);margin-top:2px;padding-top:5px}

@@ -113,23 +113,33 @@
   }
 
   // ---------- Limite DAC7 (aba própria; números escritos à mão, por plataforma e por ano civil) ----------
-  // d.dac7['AAAA'] = [{ id, nome, vendas, valor, em }]. A plataforma comunica às Finanças com 30 vendas ou mais de 2000 €.
+  // d.dac7['AAAA'] = [{ id, nome, vendas, valor, em, registos? }]. A plataforma comunica às Finanças com 30 vendas ou mais de 2000 €.
+  // `vendas`/`valor` = a base escrita à mão (o que já tinhas antes de registar vendas); `registos` = [{ id, data, nome, valor }],
+  // as vendas registadas uma a uma (plataformas antigas não têm o campo). O que conta para o limite é a base + os registos.
   var DAC7_EUROS = 2000, DAC7_VENDAS = 30, DAC7_PERTO = 0.85, dacAno = hoje.getFullYear();
   function plataformas(){ var l = d.dac7[String(dacAno)]; return Array.isArray(l) ? l : []; }
+  function registos(p){ return Array.isArray(p.registos) ? p.registos : []; }
+  /** Totais de uma plataforma para o limite: base escrita à mão + vendas registadas. */
+  function totais(p){
+    var r = registos(p);
+    return { vendas: (Number(p.vendas) || 0) + r.length, valor: r2((Number(p.valor) || 0) + soma(r, function(x){ return x.valor; })) };
+  }
   function estadoDac7(p){
-    var v = Number(p.valor) || 0, n = Number(p.vendas) || 0;
+    var t = totais(p), v = t.valor, n = t.vendas;
     if(v > DAC7_EUROS || n >= DAC7_VENDAS) return 'passou';
     if(v >= DAC7_EUROS * DAC7_PERTO || n >= Math.ceil(DAC7_VENDAS * DAC7_PERTO)) return 'perto';
     return 'ok';
   }
   function textoDac7(p, e){
-    var v = Number(p.valor) || 0, n = Number(p.vendas) || 0;
+    var t = totais(p), v = t.valor, n = t.vendas;
     if(e === 'passou') return '⚠ Chegaste ao limite em ' + (p.nome || 'esta plataforma') + ': ' + (n >= DAC7_VENDAS ? n + ' vendas' : euros(v)) + '. A plataforma vai comunicar estas vendas às Finanças.';
     var falta = 'Faltam ' + euros(Math.max(0, DAC7_EUROS - v)) + ' e ' + Math.max(0, DAC7_VENDAS - n) + ' venda(s) para o limite.';
     return e === 'perto' ? '⚠ Perto do limite. ' + falta : falta;
   }
   function pintarPlataforma(box, p){
-    var v = Number(p.valor) || 0, n = Number(p.vendas) || 0, e = estadoDac7(p);
+    var t = totais(p), v = t.valor, n = t.vendas, e = estadoDac7(p);
+    var r = registos(p), extra = box.querySelector('.dac-registadas');
+    extra.textContent = r.length ? '+ ' + r.length + ' venda(s) registada(s) em baixo: ' + euros(soma(r, function(x){ return x.valor; })) : '';
     var bE = box.querySelector('.bEuros'), bN = box.querySelector('.bVendas');
     bE.style.width = Math.min(100, v / DAC7_EUROS * 100) + '%';
     bN.style.width = Math.min(100, n / DAC7_VENDAS * 100) + '%';
@@ -145,7 +155,74 @@
   }
   function totalDac7(){
     var l = plataformas();
-    $('dTotal').textContent = l.length > 1 ? 'Total das plataformas em ' + dacAno + ': ' + euros(soma(l, function(p){ return p.valor; })) + ' em ' + soma(l, function(p){ return p.vendas; }) + ' vendas (o limite conta cada plataforma à parte).' : '';
+    $('dTotal').textContent = l.length > 1 ? 'Total das plataformas em ' + dacAno + ': ' + euros(soma(l, function(p){ return totais(p).valor; })) + ' em ' + soma(l, function(p){ return totais(p).vendas; }) + ' vendas (o limite conta cada plataforma à parte).' : '';
+  }
+
+  // ---------- registar vendas e histórico ----------
+  function renderVendaForm(){
+    var l = plataformas(), sel = $('dvPlat'), antes = sel.value;
+    sel.textContent = '';
+    l.forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.nome; sel.appendChild(o); });
+    if(antes && l.some(function(p){ return p.id === antes; })) sel.value = antes;
+    var sem = !l.length;
+    ['dvPlat', 'dvData', 'dvNome', 'dvValor', 'dvAdd'].forEach(function(id){ $(id).disabled = sem; });
+    $('dvAviso').textContent = sem ? 'Adiciona primeiro uma plataforma em cima.' : '';
+    // A data fica dentro do ano que estás a ver (o limite é por ano civil).
+    $('dvData').min = dacAno + '-01-01'; $('dvData').max = dacAno + '-12-31';
+    var v = $('dvData').value;
+    if(!v || v.slice(0, 4) !== String(dacAno)) $('dvData').value = dacAno === hoje.getFullYear() ? hojeISO() : dacAno + '-12-31';
+  }
+  function registarVenda(){
+    var p = plataformas().filter(function(x){ return x.id === $('dvPlat').value; })[0];
+    var valor = r2(Number(String($('dvValor').value).replace(',', '.')) || 0);
+    var data = $('dvData').value;
+    if(!p) return;
+    if(!(valor > 0)){ $('dvAviso').textContent = 'Escreve o valor que recebeste.'; $('dvValor').focus(); return; }
+    if(!data || data.slice(0, 4) !== String(dacAno)){ $('dvAviso').textContent = 'A data tem de ser de ' + dacAno + '.'; $('dvData').focus(); return; }
+    p.registos = registos(p).concat([{ id: novoId(), data: data, nome: $('dvNome').value.trim().slice(0, 60), valor: valor }]);
+    $('dvNome').value = ''; $('dvValor').value = '';
+    $('dvAviso').textContent = 'Registada: ' + euros(valor) + ' em ' + p.nome + '.';
+    renderDac7(); alterado();
+    $('dvNome').focus();
+  }
+  function renderHistorico(){
+    var l = plataformas(), box = $('dHist'); box.textContent = '';
+    var todos = [];
+    l.forEach(function(p){ registos(p).forEach(function(x){ todos.push({ x: x, p: p }); }); });
+    todos.sort(function(a, b){ return (b.x.data || '') < (a.x.data || '') ? -1 : (b.x.data || '') > (a.x.data || '') ? 1 : 0; });
+    if(!todos.length){ var n = document.createElement('div'); n.className = 'nota'; n.textContent = 'Ainda sem vendas registadas em ' + dacAno + '.'; box.appendChild(n); }
+    todos.forEach(function(it){
+      var el = document.createElement('div'); el.className = 'reg';
+      var dd = document.createElement('div'); dd.className = 'd';
+      var nome = document.createElement('div'); nome.textContent = it.x.nome || '(sem descrição)';
+      var m = document.createElement('div'); m.className = 'm'; m.textContent = fmtData(it.x.data) + ' · ' + it.p.nome;
+      dd.appendChild(nome); dd.appendChild(m);
+      var v = document.createElement('div'); v.className = 'v verde'; v.textContent = '+' + euros(it.x.valor);
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'x'; b.textContent = '×'; b.setAttribute('aria-label', 'Apagar venda');
+      b.addEventListener('click', function(){
+        if(!confirm('Apagar a venda «' + (it.x.nome || 'sem descrição') + '» (' + euros(it.x.valor) + ') de ' + it.p.nome + '?')) return;
+        it.p.registos = registos(it.p).filter(function(y){ return y.id !== it.x.id; });
+        renderDac7(); alterado();
+      });
+      el.appendChild(dd); el.appendChild(v); el.appendChild(b);
+      box.appendChild(el);
+    });
+    // Resumo: o que estava na barra (base) + o que registaste = o que conta para o limite.
+    var res = $('dResumo'); res.textContent = '';
+    if(!l.length) return;
+    var linhaResumo = function(rotulo, valor, vendas, forte){
+      var row = document.createElement('div'); row.className = 'dac-resumo-linha' + (forte ? ' forte' : '');
+      var a = document.createElement('span'); a.textContent = rotulo;
+      var b = document.createElement('span'); b.textContent = euros(valor) + ' · ' + vendas + ' venda(s)';
+      row.appendChild(a); row.appendChild(b); res.appendChild(row);
+    };
+    l.forEach(function(p){
+      var r = registos(p), t = totais(p);
+      var cab = document.createElement('div'); cab.className = 'dac-resumo-plat'; cab.textContent = p.nome; res.appendChild(cab);
+      linhaResumo('Na barra (escrito à mão)', Number(p.valor) || 0, Number(p.vendas) || 0, false);
+      linhaResumo('Registadas', soma(r, function(x){ return x.valor; }), r.length, false);
+      linhaResumo('Total para o limite', t.valor, t.vendas, true);
+    });
   }
   function barra(rotulo, classe, max){
     return '<div class="rot"><span>' + rotulo + '</span><b class="r' + classe.slice(2) + '"></b></div>' +
@@ -161,6 +238,7 @@
       el.innerHTML = '<div class="plat-topo"><strong></strong><button type="button" class="x" aria-label="Apagar plataforma">×</button></div>' +
         '<div class="campos"><div><label>Vendas feitas</label><input type="number" class="iVendas" inputmode="numeric" min="0" step="1"></div>' +
         '<div><label>Dinheiro recebido (€)</label><input type="number" class="iValor" inputmode="decimal" min="0" step="0.01"></div></div>' +
+        '<div class="nota dac-registadas"></div>' +
         barra('Dinheiro', '.bEuros', DAC7_EUROS) + barra('Vendas', '.bVendas', DAC7_VENDAS) + '<div class="dac-estado" role="status"></div>';
       el.querySelector('strong').textContent = p.nome;
       var iN = el.querySelector('.iVendas'), iV = el.querySelector('.iValor');
@@ -176,7 +254,8 @@
       iN.addEventListener('input', mudou); iV.addEventListener('input', mudou);
       el.querySelector('button.x').setAttribute('aria-label', 'Apagar ' + p.nome);
       el.querySelector('button.x').addEventListener('click', function(){
-        if(!confirm('Apagar «' + p.nome + '» de ' + dacAno + '?')) return;
+        var nr = registos(p).length;
+        if(!confirm('Apagar «' + p.nome + '» de ' + dacAno + '?' + (nr ? ' Apaga também as ' + nr + ' venda(s) registadas desta plataforma.' : ''))) return;
         d.dac7[String(dacAno)] = plataformas().filter(function(y){ return y.id !== p.id; });
         renderDac7(); alterado();
       });
@@ -184,6 +263,8 @@
       box.appendChild(el);
     });
     totalDac7();
+    renderVendaForm();
+    renderHistorico();
   }
   function adicionarPlataforma(){
     var nome = $('dNome').value.trim().slice(0, 40);
@@ -286,6 +367,8 @@
   $('dAnoSeg').addEventListener('click', function(){ dacAno++; renderDac7(); });
   $('dAdd').addEventListener('click', adicionarPlataforma);
   $('dNome').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); adicionarPlataforma(); } });
+  $('dvAdd').addEventListener('click', registarVenda);
+  $('dvValor').addEventListener('keydown', function(e){ if(e.key === 'Enter') registarVenda(); });
   if(location.hash === '#dac7') mostrarAba('dac7');
   window.addEventListener('pagehide', function(){
     if(sujo){ try{ fetch('/api/negocio', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ versao: versao, dados: d }), keepalive: true }); }catch(e){} }

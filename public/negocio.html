@@ -102,6 +102,25 @@
   <datalist id="dSugestoes"><option value="Vinted"><option value="OLX"><option value="Wallapop"><option value="CustoJusto"><option value="eBay"></datalist>
   <div class="nota" id="dTotal"></div>
 </section>
+
+<section class="card" id="dVendaCard">
+  <h2>Registar venda</h2>
+  <p>Cada venda que registas aqui soma-se à barra da plataforma (aos números que escreveste em cima).</p>
+  <div class="add dac-venda">
+    <div><label for="dvPlat">Onde vendeste</label><select id="dvPlat"></select></div>
+    <div><label for="dvData">Data</label><input type="date" id="dvData"></div>
+    <div class="grande"><label for="dvNome">O que vendeste</label><input type="text" id="dvNome" maxlength="60" placeholder="ex.: RTX 3070"></div>
+    <div><label for="dvValor">Valor recebido (€)</label><input type="number" id="dvValor" inputmode="decimal" min="0" step="0.01"></div>
+    <button type="button" id="dvAdd" class="grande">Registar venda</button>
+  </div>
+  <div class="nota" id="dvAviso" role="status"></div>
+</section>
+
+<section class="card">
+  <h2>Histórico de vendas</h2>
+  <div id="dHist"></div>
+  <div class="dac-resumo" id="dResumo"></div>
+</section>
 </div>
 
 <script src="/auth.js"></script>

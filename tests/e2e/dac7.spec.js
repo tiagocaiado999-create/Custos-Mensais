@@ -105,6 +105,65 @@ test.describe('Limite DAC7', () => {
     await expect(page).not.toHaveURL(/#dac7/);
     expect(erros).toEqual([]);
   });
+
+  test('registar vendas soma-se à barra; histórico com resumo; apagar tira da barra', async ({ page, request }) => {
+    const erros = semErros(page);
+    await page.goto('/negocio.html#dac7');
+    await guardadoOuVazio(page);
+    await expect(page.locator('#dvAviso')).toHaveText('Adiciona primeiro uma plataforma em cima.');
+    await expect(page.getByRole('button', { name: 'Registar venda' })).toBeDisabled();
+
+    await page.getByLabel('Plataforma').fill('Vinted');
+    await page.getByRole('button', { name: 'Adicionar plataforma' }).click();
+    const vinted = page.locator('.plat', { hasText: 'Vinted' });
+    await vinted.getByLabel('Vendas feitas').fill('10');
+    await vinted.getByLabel('Dinheiro recebido (€)').fill('1494');
+    await page.getByLabel('Plataforma').fill('Wallapop');
+    await page.getByRole('button', { name: 'Adicionar plataforma' }).click();
+
+    // venda na Vinted: a barra passa a base + registada
+    await page.getByLabel('Onde vendeste').selectOption({ label: 'Vinted' });
+    await page.locator('#dvData').fill(ANO + '-11-20');
+    await page.getByLabel('O que vendeste').fill('RTX 3070');
+    await page.getByLabel('Valor recebido (€)').fill('200');
+    await page.getByRole('button', { name: 'Registar venda' }).click();
+    await expect(vinted.locator('.rEuros')).toHaveText(/1694,00\s€ de 2000,00\s€/);
+    await expect(vinted.locator('.rVendas')).toHaveText('11 de 30');
+    await expect(vinted.locator('.dac-registadas')).toHaveText(/1 venda\(s\) registada\(s\) em baixo: 200,00\s€/);
+    await expect(vinted.locator('.dac-estado')).toHaveText(/^Faltam 306,00\s€ e 19 venda\(s\)/);
+
+    // sem valor não regista
+    await page.getByLabel('Onde vendeste').selectOption({ label: 'Wallapop' });
+    await page.getByRole('button', { name: 'Registar venda' }).click();
+    await expect(page.locator('#dvAviso')).toHaveText('Escreve o valor que recebeste.');
+    await page.locator('#dvData').fill(ANO + '-11-25');
+    await page.getByLabel('Valor recebido (€)').fill('45.5');
+    await page.getByLabel('Valor recebido (€)').press('Enter');
+
+    // histórico: mais recente primeiro; resumo por plataforma
+    await expect(page.locator('#dHist .reg')).toHaveCount(2);
+    await expect(page.locator('#dHist .reg').first()).toContainText('Wallapop');
+    await expect(page.locator('#dHist .reg').nth(1)).toContainText('RTX 3070');
+    await expect(page.locator('#dResumo')).toContainText(/Total para o limite\s*1694,00\s€ · 11 venda\(s\)/);
+    await expect(page.locator('#dTotal')).toHaveText(/1739,50\s€ em 12 vendas/);
+    await guardado(page);
+    const n = await negocio(request);
+    const v = n.dados.dac7[ANO].find((p) => p.nome === 'Vinted');
+    expect([v.vendas, v.valor]).toEqual([10, 1494]);   // a base escrita à mão não muda
+    expect(v.registos.map((r) => [r.data, r.nome, r.valor])).toEqual([[ANO + '-11-20', 'RTX 3070', 200]]);
+
+    // apagar a venda tira-a da barra
+    page.once('dialog', (d) => d.accept());
+    await page.locator('#dHist .reg', { hasText: 'RTX 3070' }).getByRole('button', { name: 'Apagar venda' }).click();
+    await expect(vinted.locator('.rVendas')).toHaveText('10 de 30');
+    await expect(page.locator('#dHist .reg')).toHaveCount(1);
+
+    // recarregar mantém o histórico
+    await guardado(page);
+    await page.reload();
+    await expect(page.locator('#dHist .reg')).toHaveCount(1);
+    expect(erros).toEqual([]);
+  });
 });
 
 async function guardadoOuVazio(page) { await expect(page.locator('#estado')).toHaveText(/Guardado|Ainda sem registos/); }
